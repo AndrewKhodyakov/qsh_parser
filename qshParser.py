@@ -50,6 +50,7 @@ class DataStructReadingMethods(object):
 #        self.type_table['uint32'].unpack_code = 
 
         self.type_table['int64'].cursor_step = 8 
+
         self.type_table['double'].cursor_step = 8
 #        self.type_table['double'].unpack_code = 
 
@@ -81,14 +82,15 @@ class DataStructReadingMethods(object):
         """
         Чтение одного ,byte
         """
-        tmp = struct.unpack(self.type_table['byte'].unpack_code, stream.read(self.type_table['byte'].cursor_step))[0]
+        tmp = struct.unpack(self.type_table['byte'].unpack_code,
+            stream.read(self.type_table['byte'].cursor_step))[0]
         return tmp
 
     def read_byte_array(self, stream, array_len):
         """
         Чтение массива бит utf8
         """
-        string = str(stream.read(array_len))
+        string = bytes.decode(stream.read(array_len))
         return string
 
     def read_datetime(self, stream):
@@ -99,7 +101,8 @@ class DataStructReadingMethods(object):
         1 января 0001 года. Соответствует свойству Ticks структуры DateTime
         из .NET версии 4. Сохраняется в поле типа int64
         """
-        date_str = struct.unpack(self.type_table['DateTime'].unpack_code, stream.read(self.type_table['DateTime'].cursor_step))[0]
+        date_str = struct.unpack(self.type_table['DateTime'].unpack_code,
+            stream.read(self.type_table['DateTime'].cursor_step))[0]
 
         return (datetime(1, 1, 1) + timedelta(microseconds = date_str/10))
 
@@ -111,7 +114,8 @@ class DataStructReadingMethods(object):
         Походу в версии 3 вместо Uleb128 - используется беззнаковое целое
 длинной 8 бит
         """
-#        string_len = struct.unpack(self.type_table['ULeb128'].unpack_code, stream.read(self.type_table['ULeb128'].cursor_step))[0]
+#        string_len = struct.unpack(self.type_table['ULeb128'].unpack_code,
+#            stream.read(self.type_table['ULeb128'].cursor_step))[0]
         string_len = self.read_one_byte(stream)
 
         string = self.read_byte_array(stream, string_len)
@@ -130,8 +134,10 @@ class DataStructReadingMethods(object):
             предыдущее поле содержит число 268435455; в ином случае данное 
             поле отсутствует
         """
-        pass
-        #TODO продолжай писать тип 
+        first_path = stream.read(self.type_table['ULeb128'].cursor_step)
+        print(first_path)
+#        if 
+#        second_path = 
 
     
 class QshParser(object):
@@ -155,7 +161,9 @@ class QshParser(object):
         if not os.path.exists(path_to_file):
             msg = u'Путь к файлу {0} не найден'.format(path_to_file)
             raise FileNotExists(msg)
+
         self.path_to_file = path_to_file
+        self.stream = open(self.path_to_file, 'rb')
 
         self.reading_methods = DataStructReadingMethods()
 
@@ -169,14 +177,14 @@ class QshParser(object):
                                             'head_len',])
 
         self.streams_types = {
-                                '\x10':'Stock',
-                                '\x20':'Deals',
-                                '\x30':'Orders',
-                                '\x40':'Trades',
-                                ' ':'Trades', #почему то так встречается во всех файлах Trades
-                                '\x50':'Messages',
-                                '\x60':'AuxInfo',
-                                '\x70':'OrdLog' }
+                                b'\x10':'Stock',
+                                b'\x20':'Deals',
+                                b'\x30':'Orders',
+                                b'\x40':'Trades',
+                                b' ':'Trades', #почему то так встречается во всех файлах Trades
+                                b'\x50':'Messages',
+                                b'\x60':'AuxInfo',
+                                b'\x70':'OrdLog' }
         self.stream_headers = {}
         
 
@@ -187,7 +195,8 @@ class QshParser(object):
         """
         Читаем заголовок файла
         Структура:
-        byte[] - сигнатура файла = «QScalp History Data» (только символы UTF8, без нуля в конце)
+        byte[] - сигнатура файла = «QScalp History Data» 
+            (только символы UTF8, без нуля в конце)
         byte - мажорная версия формата файла = 4
         String - имя приложения, с помощью которого записан данный файл
         String - произвольный пользовательский комментарий
@@ -195,10 +204,8 @@ class QshParser(object):
         byte - количество информационных потоков в файле
         """
         self.file_header.signature =\
-                    self.reading_methods.read_byte_array(self.stream, 19)
+            self.reading_methods.read_byte_array(self.stream, 19)
                                             #тут хардкод, см описание функции
-        print(self.file_header.signature)
-#        if self.file_header.signature != u'QScalp History Data':
         if 'QScalp History Data' not in self.file_header.signature:
             msg = u'Ошибка сигнатуры файла - проверьте тип файла.'
             raise FileSignatureError(msg)
@@ -227,20 +234,24 @@ class QshParser(object):
         String -полный код инструмента, которому соответствует поток; для
             потока «Messages» отсутствует
         """
-        stream_header_struct = namedtuple('Stream_header',
-                                            ['stream_type',
-                                            'instrument_code',
-                                            'name'
-                                            ])
+        stream_header_struct = namedtuple(
+            'Stream_header',[
+                    'stream_type',
+                    'instrument_code',
+                    'name'
+            ]
+        )
 
         for i in range(self.file_header.stream_count):
             stream_id = self.stream.read(1) #здесь чтение без преобразования
-            #TODO смотри пробдема с преобразование мтипов из byte в str в Python3
+
             self.stream_headers[stream_id] = stream_header_struct
             self.stream_headers[stream_id].stream_type = stream_id
             self.stream_headers[stream_id].name = self.streams_types[stream_id]
+
             if stream_id != '\x50': #для сообщений названия инструмента нет
-                self.stream_headers[stream_id].instrument_code = self.reading_methods.read_string(self.stream)
+                self.stream_headers[stream_id].instrument_code =\
+                     self.reading_methods.read_string(self.stream)
 
     
     def __get_frame_header(self):
@@ -252,8 +263,7 @@ class QshParser(object):
             списком заголовков потоков, которому принадлежит кадр; 
             указывается,только если файл содержит более одного потока
         """
-        #TODO дописывай заголовок фрейма
-        pass
+        print('\n' + str(self.stream.tell()))
 
     def __get_frame_data(self):
         """
@@ -268,6 +278,7 @@ class QshParser(object):
         self.stream = open(self.path_to_file, 'rb')
         self.__get_file_header()
         self.__get_stream_header()
+        self.__get_frame_header()
 
     def __next(self):
         """
@@ -309,15 +320,18 @@ class QshParser(object):
             print(u'-'*40 + u'\n')
 
 #---------------------------------
-if __name__=="__main__":
-    import os
-    print(os.getcwd())
-#    P = os.getcwd() + '/20140414/GAZP.Qscalp.Quotes.2014-04-14.qsh'
-    P = os.getcwd() + '/20150311/GAZP.Qscalp.Quotes.2015-03-11.qsh'
-    if os.path.exists(P):
-        qsh = QshParser(P)
-        qsh.read_file_metadata()
-        qsh.print_file_metadata()
-        qsh.print_strems_headers()
+if __name__ == "__main__":
+
+    import os, sys
+
+    if len(sys.argv) < 2:
+        print('Вторым аргументом надо подавать путь к файлу с данными qsh.')
     else:
-        print('Файл {0}  не найден!'.format(P))
+        path_to_qsh = os.path.abspath(sys.argv[1])
+        if os.path.exists(path_to_qsh):
+            qsh = QshParser(path_to_qsh)
+            qsh.read_file_metadata()
+            qsh.print_file_metadata()
+            qsh.print_strems_headers()
+        else:
+            print('Файл {0}  не найден!'.format(path_to_qsh))
