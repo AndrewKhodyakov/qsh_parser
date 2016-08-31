@@ -93,6 +93,8 @@ class ULeb128:
                 )
                 self.__input = int(rest, 2)
 
+        #TODO здесь определиться с тем как перкодировать полученное значенеие
+        #при записи в файл
         self.__output = [hex(int(i, 2)) for i in self.__output]
           
     @property
