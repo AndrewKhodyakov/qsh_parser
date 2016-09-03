@@ -3,52 +3,24 @@
 #===============================================================================
 """
     Попытки_написать_кодировик_декодировщик_leb__uleb
+    Во всех операциях сдвиг применяется:
+
+    При кодировании <<:
+        для определения того что делать дельше
+        - если старший бит (результат сдвига - остаток и от него можно отрезать
+            дальше -  продолжаем числоб и на следующей итерации рассмтариваем
+            именно остаток от сдивага);
+
+    При декодировании >>:
+        для сборки большого числа и выделения новых ячеек в нем
 """
 from types import GeneratorType
 #===============================================================================
-#def shifting(integer, shift):
-#    """
-#    Сдвиг на лево
-#    integer: целое число для проведения одного шага вычислений
-#    shift: коллличесвто бит на которые неодбходимо производить сдвиг
-#    """
-#
-#    int_to_str_of_bits = lambda integer: bin(integer).split('b')[1]
-#    zero_padding = lambda str_of_bites, shift:\
-#        '0' * ((shift + 1) - len(str_of_bites)) + str_of_bites
-#    unity_padding = lambda seven_bits: '1' + seven_bits
-#    get_seveb_bits = lambda str_of_bites: str_of_bites[-7:]
-#    
-#
-#    result = []
-#    integer = integer
-#    shift = shift
-#    while True:
-#        rest = bin(integer >> shift)
-#        if rest == '0b0': #exit
-#            result.append(
-#                zero_padding(
-#                    int_to_str_of_bits(integer), shift
-#                )
-#            )
-#            return result
-#            break
-#
-#        else: #go on
-#            result.append(
-#                unity_padding(
-#                    get_seveb_bits(
-#                        int_to_str_of_bits(integer)
-#                    )
-#                )
-#            )
-#            integer = int(rest, 2)
-
 int_to_str_of_bits = lambda integer: bin(integer).split('b')[1]
 zero_padding = lambda str_of_bites, shift:\
     '0' * ((shift + 1) - len(str_of_bites)) + str_of_bites
 unity_padding = lambda seven_bits: '1' + seven_bits
-get_seveb_bits = lambda str_of_bites: str_of_bites[-7:]
+get_seven_bits = lambda str_of_bites: str_of_bites[-7:]
 
 class ULeb128:
     """
@@ -68,10 +40,13 @@ class ULeb128:
         Кодирование числе в формат uleb128
         integer: - целое число для кодирования
         """
+        self.__output = []
         if not isinstance(integer, int):
             raise TypeError('Type encoding input is not int')
 
         self.__input = integer
+        #TODO  здесь надо убрать все преобразования из целого в строку и сплты
+        #- работу  продолэать исключительно с интом и бинращиной
 
         while True:
             rest = bin(self.__input >> self.__shift)
@@ -86,7 +61,7 @@ class ULeb128:
             else: #go on
                 self.__output.append(
                     unity_padding(
-                        get_seveb_bits(
+                        get_seven_bits(
                             int_to_str_of_bits(self.__input)
                         )
                     )
@@ -105,19 +80,35 @@ class ULeb128:
         return self.__output
             
 
-    def dencoding(self, byte_stream):
+    def decoding(self, byte_stream):
         """
         byte_stream: byte generator (генератор байт, отадет их по одной)
         """
+        self.__output = 0
         if not isinstance(byte_stream, GeneratorType):
             raise TypeError('Type decoding input is GeneratorType')
 
-        #они записаны задом на перед, поэтому надо читать каждый до тех пор
-        #пока не появится число начинающиеся на 0
+        value = 0
+        count = 0
         while True:
-            
-            if higt_bit == '0':
+            try:
+                byte = next(byte_stream)
+            except StopIteration:
                 break
+
+            if value == 0:
+                value = value | (byte & 127)
+            else:
+                rest = ((byte & 127) << (self.__shift * count))
+                value = rest | value 
+
+            if (byte & 128) == 0:
+                print(bin(byte))
+                break
+            count += 1
+                    
+
+        self.__output = value
 
     def __str_(self):
         """
