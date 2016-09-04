@@ -24,6 +24,8 @@ get_seven_bits = lambda str_of_bites: str_of_bites[-7:]
 
 class ULeb128:
     """
+    Тип данных ULeb128 - согласно алгоритму:
+        https://en.wikipedia.org/wiki/LEB128
     """
     def __init__(self):
         """
@@ -89,7 +91,8 @@ class ULeb128:
             raise TypeError('Type decoding input is GeneratorType')
 
         value = 0
-        count = 0
+        count = 0 #множитель на сколько сдвигать послежующий байт
+
         while True:
             try:
                 byte = next(byte_stream)
@@ -97,14 +100,16 @@ class ULeb128:
                 break
 
             if value == 0:
+                #если это первый байт из числа - берем семь младших байт и сохраняем его отдельно
                 value = value | (byte & 127)
             else:
+                #если следующий сдвигаем влево, берем семь младших байт и прибовляем туда предидущий
                 rest = ((byte & 127) << (self.__shift * count))
                 value = rest | value 
 
             if (byte & 128) == 0:
-                print(bin(byte))
                 break
+
             count += 1
                     
 
@@ -127,6 +132,8 @@ class ULeb128:
 
 class Leb128:
     """
+    Тип данных Leb128 - согласно алгоритму:
+        https://en.wikipedia.org/wiki/LEB128
     """
     def __init__(self):
         """
