@@ -15,6 +15,7 @@
         для сборки большого числа и выделения новых ячеек в нем
 """
 from types import GeneratorType
+from itertools import count
 #===============================================================================
 int_to_str_of_bits = lambda integer: bin(integer).split('b')[1]
 zero_padding = lambda str_of_bites, shift:\
@@ -134,25 +135,73 @@ class Leb128:
     """
     Тип данных Leb128 - согласно алгоритму:
         https://en.wikipedia.org/wiki/LEB128
+    Отрицательные числа предстваляются в  виде двух компанентных, в python при
+    выполнении операции по извдечению семи младших байт ( & 127 ), они отображаются
+    сразу же в виде двух компанентных значений (т.е. это обычное представление + 1)
     """
     def __init__(self):
         """
         """
-        pass
+        self.__shift = 7
+        self.__input = None
+        self.__output = []
 
     def encoding(self, integer):
         """
         """
-        pass
+        if not isinstance(integer, int):
+            raise TypeError('Type encoding input is not int')
 
+        self.__output = []
+        rest = None
+        step = count()
+        value = None
+
+        while True:
+            #режем по сем байт
+            #если один или -1 в остатке - выход из цикла
+            #добавляем один и добваляем единицу и ковертируем в byte
+            rest = integer >> (self.__shift * next(step))
+
+            if rest in [0, -1]:
+                #здесь в послденем байте надо поменять 1 на 0
+                if len(self.__output) == 0:
+                    self.__output.append(integer & 127)
+                else:
+                    self.__output[len(self.__output) - 1] =\
+                        self.__output[len(self.__output) - 1] & 127
+
+                break
+            else:
+                self.__output.append( 128 | (rest & 127))
+
+    #TODO дописать декодирование + переписать все оставив конструкцию  таким
+    #образом, что бы использовать только один сопособ деокдирования для обоих типов
+    #данных
     def dencoding(self, byte):
         """
         """
         pass
 
+    @property
+    def result(self):
+        """
+        Return result
+        """
+        return self.__output
+
     def __str_(self):
         print('ULeb_128_decoder\encoder')
+
+    def __rep__(self):
+        """
+        Detail full
+        """
+        print('ULeb_128_decoder\encoder : input - {0}, output - {1}'.format(
+            self.__input,
+            self.__output
+        ))
 #===============================================================================
 
-if __name__ == "__main__":pass
+if __name__ == "__main__": pass
 
