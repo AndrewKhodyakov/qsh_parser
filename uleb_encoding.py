@@ -10,7 +10,8 @@ class baseLEB128:
         base_byte_number: base byte coding number
         """
         self.base_byte_number = base_byte_number
-        self.do_encode = None
+        self.to_encode = None
+        self.to_decode = None
 
     @property
     def __check_sign(self):
@@ -58,9 +59,12 @@ class baseLEB128:
         self.to_decode = byte_to_decode
         step = count(1)
         out = 0
+
         strip_first_byte = [self.to_decode[byte_num] & 127\
             for byte_num in range(self.base_byte_number)]
+
         strip_first_byte.reverse()
+
         for byte in strip_first_byte:
             out = out | byte << 7*(self.base_byte_number - next(step))
         return out 
