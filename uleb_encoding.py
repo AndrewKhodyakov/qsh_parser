@@ -2,7 +2,8 @@
     uleb/leb python implimintation - tutorial:
         - https://en.wikipedia.org/wiki/LEB128
 """
-
+#TODO возможно не надо выставлять бит подписи, и проверять его установку,
+#надо сомтреть как python работет с отрицательными числами
 import unittest
 from itertools import count
 
