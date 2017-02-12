@@ -28,15 +28,12 @@ class baseLEB128:
         Split input number into 7-bit group and add 1 on all group,
         excpet last group
         """
-        sign_byte = 0
         end_flag = 1
         for byte_group in range(self.base_byte_number):
             if byte_group == (self.base_byte_number - 1):
                 end_flag = 0
-                if self.__check_sign:
-                    sign_byte = 64
                 
-            yield ((self.to_encode >> (byte_group*7)) & 127) | (128*end_flag) | sign_byte
+            yield ((self.to_encode >> (byte_group*7)) & 127) | (128*end_flag)
 
 
     def encode(self, number_to_encode):
@@ -45,10 +42,19 @@ class baseLEB128:
         """
         self.to_encode = number_to_encode
         step = count(1)
+
         out = 0
+#        if self.__check_sign:
+#            out = -1
+#            signed = True
+#        else:
+#            out = 0
+#            signed = False
+
         for byte in self.__preporate_bytes_for_encode():
             out = out | byte << 8*(self.base_byte_number - next(step))
             
+#        return out.to_bytes(self.base_byte_number, byteorder='big', signed=signed)
         return out.to_bytes(self.base_byte_number, byteorder='big')
 
 
@@ -72,6 +78,7 @@ class baseLEB128:
 class Uleb128(baseLEB128):
     """
     Unsigned LEB128 encode\decode class
+
     uleb128 - https://en.wikipedia.org/wiki/LEB128
     """
     pass
@@ -94,7 +101,8 @@ class TestUleb128EncodeDecode(unittest.TestCase):
         """
         self.number = 624485
         self.bytes = b'\xe5\x8e&'
-        self.uleb128 = baseLEB128(3)
+#        self.uleb128 = baseLEB128(3)
+        self.uleb128 = Uleb128(3)
 
     def test_encode(self):
         """
@@ -107,6 +115,30 @@ class TestUleb128EncodeDecode(unittest.TestCase):
         decode
         """
         self.assertEqual(self.number, self.uleb128.decode(self.bytes))
+
+class TestSleb128EncodeDecode(unittest.TestCase):
+    """
+    Try etalon from - https://en.wikipedia.org/wiki/LEB128
+    """
+    def setUp(self):
+        """
+        save etalons
+        """
+        self.number = -624485
+        self.bytes = b'\x9b\xf1Y'
+        self.sleb128 = Sleb128(3)
+
+    def test_encode(self):
+        """
+        enocde
+        """
+        self.assertEqual(self.bytes, self.sleb128.encode(self.number))
+
+#    def test_decode(self):
+#        """
+#        decode
+#        """
+#        self.assertEqual(self.number, self.uleb128.decode(self.bytes))
 
 if __name__=="__main__":
     unittest.main()
