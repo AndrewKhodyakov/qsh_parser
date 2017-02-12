@@ -29,11 +29,15 @@ class baseLEB128:
         excpet last group
         """
         end_flag = 1
+        sign_bit = 0
         for byte_group in range(self.base_byte_number):
             if byte_group == (self.base_byte_number - 1):
                 end_flag = 0
+                if self.__check_sign:
+                    sign_bit = 64
                 
-            yield ((self.to_encode >> (byte_group*7)) & 127) | (128*end_flag)
+            yield ((self.to_encode >> (byte_group*7)) & 127) |\
+                ((128 | sign_bit)*end_flag)
 
 
     def encode(self, number_to_encode):
@@ -42,19 +46,11 @@ class baseLEB128:
         """
         self.to_encode = number_to_encode
         step = count(1)
-
         out = 0
-#        if self.__check_sign:
-#            out = -1
-#            signed = True
-#        else:
-#            out = 0
-#            signed = False
 
         for byte in self.__preporate_bytes_for_encode():
             out = out | byte << 8*(self.base_byte_number - next(step))
             
-#        return out.to_bytes(self.base_byte_number, byteorder='big', signed=signed)
         return out.to_bytes(self.base_byte_number, byteorder='big')
 
 
