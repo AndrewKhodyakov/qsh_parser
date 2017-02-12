@@ -1,7 +1,12 @@
+"""
+    uleb/leb python implimintation - tutorial:
+        - https://en.wikipedia.org/wiki/LEB128
+"""
+
 import unittest
 from itertools import count
 
-class baseLEB128:
+class BaseLEB128:
     """
     base class for DRY
     """
@@ -14,10 +19,10 @@ class baseLEB128:
         self.to_decode = None
 
     @property
-    def __check_sign(self):
+    def __check_sign_bit(self):
         """
-        Check number
-        """ 
+        Check number, for encoding
+        """
         out = False
         if (self.__class__.__name__ in 'Sleb128') & (self.to_encode < 0):
             out = True
@@ -33,9 +38,9 @@ class baseLEB128:
         for byte_group in range(self.base_byte_number):
             if byte_group == (self.base_byte_number - 1):
                 end_flag = 0
-                if self.__check_sign:
-                    sign_bit = 64
-                
+#                if self.__check_sign_bit:
+#                    sign_bit = 64
+
             yield ((self.to_encode >> (byte_group*7)) & 127) |\
                 ((128 | sign_bit)*end_flag)
 
@@ -50,9 +55,20 @@ class baseLEB128:
 
         for byte in self.__preporate_bytes_for_encode():
             out = out | byte << 8*(self.base_byte_number - next(step))
-            
+
         return out.to_bytes(self.base_byte_number, byteorder='big')
 
+
+    @property
+    def __check_number_sign(self):
+        """
+        Check number sign
+        """
+        out = False
+        if (self.__class__.__name__ in 'Sleb128') &\
+            ((self.to_decode[self.base_byte_number - 1] & 64) == 64):
+            out = True
+        return out
 
     def decode(self, byte_to_decode):
         """
@@ -69,19 +85,24 @@ class baseLEB128:
 
         for byte in strip_first_byte:
             out = out | byte << 7*(self.base_byte_number - next(step))
-        return out 
 
-class Uleb128(baseLEB128):
+        if self.__check_number_sign:
+            out = - (1 << self.base_byte_number*7) | out
+        return out
+
+
+class Uleb128(BaseLEB128):
     """
-    Unsigned LEB128 encode\decode class
+    Unsigned LEB128 encode/decode class
 
     uleb128 - https://en.wikipedia.org/wiki/LEB128
     """
     pass
 
-class Sleb128(baseLEB128):
+
+class Sleb128(BaseLEB128):
     """
-    Signed LEB128 encode\decode class
+    Signed LEB128 encode/decode class
     sleb128 - https://en.wikipedia.org/wiki/LEB128
     """
     pass
@@ -97,7 +118,6 @@ class TestUleb128EncodeDecode(unittest.TestCase):
         """
         self.number = 624485
         self.bytes = b'\xe5\x8e&'
-#        self.uleb128 = baseLEB128(3)
         self.uleb128 = Uleb128(3)
 
     def test_encode(self):
@@ -111,6 +131,7 @@ class TestUleb128EncodeDecode(unittest.TestCase):
         decode
         """
         self.assertEqual(self.number, self.uleb128.decode(self.bytes))
+
 
 class TestSleb128EncodeDecode(unittest.TestCase):
     """
@@ -130,11 +151,11 @@ class TestSleb128EncodeDecode(unittest.TestCase):
         """
         self.assertEqual(self.bytes, self.sleb128.encode(self.number))
 
-#    def test_decode(self):
-#        """
-#        decode
-#        """
-#        self.assertEqual(self.number, self.uleb128.decode(self.bytes))
+    def test_decode(self):
+        """
+        decode
+        """
+        self.assertEqual(self.number, self.sleb128.decode(self.bytes))
 
-if __name__=="__main__":
+if __name__ == "__main__":
     unittest.main()
