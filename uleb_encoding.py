@@ -2,8 +2,6 @@
     uleb/leb python implimintation - tutorial:
         - https://en.wikipedia.org/wiki/LEB128
 """
-#TODO возможно не надо выставлять бит подписи, и проверять его установку,
-#надо сомтреть как python работет с отрицательными числами
 import unittest
 from itertools import count
 
@@ -39,8 +37,6 @@ class BaseLEB128:
         for byte_group in range(self.base_byte_number):
             if byte_group == (self.base_byte_number - 1):
                 end_flag = 0
-#                if self.__check_sign_bit:
-#                    sign_bit = 64
 
             yield ((self.to_encode >> (byte_group*7)) & 127) |\
                 ((128 | sign_bit)*end_flag)
