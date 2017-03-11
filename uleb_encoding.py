@@ -34,11 +34,14 @@ class BaseLEB128:
         """
         end_flag = 1
         sign_bit = 0
-        for byte_group in range(self.base_byte_number):
-            if byte_group == (self.base_byte_number - 1):
+        for bite_group in range(self.base_byte_number):
+            if bite_group == (self.base_byte_number - 1):
                 end_flag = 0
 
-            yield ((self.to_encode >> (byte_group*7)) & 127) |\
+            if self.__check_sign_bit:
+                sign_bit = 1
+
+            yield ((self.to_encode >> (bite_group*7)) & 127) |\
                 ((128 | sign_bit)*end_flag)
 
 
@@ -67,25 +70,39 @@ class BaseLEB128:
             out = True
         return out
 
+
     def decode(self, byte_to_decode):
         """
-        byte_to_decode: byte to decode in to large number
+        bytes_to_decode: byte to decode in to large number
         """
         self.to_decode = byte_to_decode
         step = count(1)
         out = 0
 
-        strip_first_byte = [self.to_decode[byte_num] & 127\
-            for byte_num in range(self.base_byte_number)]
+#        strip_first_byte = [self.to_decode[byte_num] & 127\
+#            for byte_num in range(self.base_byte_number)]
+
+        strip_first_byte = [byte & 127\
+            for byte in self.to_decode]
 
         strip_first_byte.reverse()
 
+#        for byte in strip_first_byte:
+#            out = out | byte << 7*(self.base_byte_number - next(step))
+
         for byte in strip_first_byte:
-            out = out | byte << 7*(self.base_byte_number - next(step))
+            out = out | byte << 7*(len(self.to_decode) - next(step))
 
         if self.__check_number_sign:
             out = - (1 << self.base_byte_number*7) | out
         return out
+
+    def read_from_stream(self, stream):
+        """
+        If bytes reading from stream
+        """
+        #TODO дописывай метод отсечения потока
+        pass
 
 
 class Uleb128(BaseLEB128):
