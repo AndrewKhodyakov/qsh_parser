@@ -52,6 +52,15 @@ class BaseLEB128:
         """
         number_to_encode: naumber for encode in to uleb128
         """
+        if not isinstance(number_to_encode, int):
+            msg = 'Number to encode should be integer'
+            raise TypeError(msg)
+
+        if (self.base_byte_number * 8) < number_to_encode.bit_length():
+            msg = 'Base_byte_number - {} is not enough for encoding - {}'.\
+                format(self.base_byte_number, number_to_encode)
+            raise OverflowError(msg)
+
         self.to_encode = number_to_encode
         step = count(1)
         out = 0
@@ -78,6 +87,10 @@ class BaseLEB128:
         """
         bytes_to_decode: bytes for decode in to large number
         """
+        if not isinstance(byte_to_decode, bytes):
+            msg = 'Value to decode should be a bytes type'
+            raise TypeError(msg)
+
         self.to_decode = byte_to_decode
         byte_number = len(self.to_decode)
         step = count(1)
@@ -104,6 +117,10 @@ class BaseLEB128:
         """
         if not method:
             msg = 'Set method to get data from stream'
+            raise AttributeError(msg)
+
+        if not hasattr(stream, method):
+            msg = 'Stream {} didnt have method {}'.format(stream, method)
             raise AttributeError(msg)
 
         out = 0
