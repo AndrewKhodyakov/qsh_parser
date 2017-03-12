@@ -132,9 +132,9 @@ class BaseLEB128:
 
         while True:
             if method_args:
-                byte = getattr(stream, method)(method_args)
+                byte = getattr(stream, method)(method_args)[0]
             else:
-                byte = getattr(stream, method)()
+                byte = getattr(stream, method)()[0]
 
             out = out | (byte << 8*next(step))
 
@@ -198,7 +198,9 @@ class TestSleb128EncodeDecode(unittest.TestCase):
         self.number = -624485
         self.bytes = b'\x9b\xf1Y'
         self.sleb128 = Sleb128(3)
-        self.stream = chain(self.bytes)
+
+        #this for byte convert to int emulation
+        self.stream = chain([[i] for i in self.bytes])
 
     def test_encode(self):
         """
