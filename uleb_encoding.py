@@ -113,7 +113,7 @@ class BaseLEB128:
         return out
 
 
-    def decode_from_stream(self, stream, method=None):
+    def decode_from_stream(self, stream, method=None, method_args=None):
         """
         If bytes reading from stream
         stream: stream obj
@@ -131,7 +131,11 @@ class BaseLEB128:
         step = count(0)
 
         while True:
-            byte = getattr(stream, method)()
+            if method_args:
+                byte = getattr(stream, method)(method_args)
+            else:
+                byte = getattr(stream, method)()
+
             out = out | (byte << 8*next(step))
 
             if (byte & 128) == 0:
