@@ -14,6 +14,10 @@ class BaseLEB128:
         """
         base_byte_number: base byte encoding number
         """
+        if not isinstance(number_to_encode, int):
+            msg = 'Base number should be a integer'
+            raise TypeError(msg)
+
         self.base_byte_number = base_byte_number
         self.to_encode = None
         self.to_decode = None
