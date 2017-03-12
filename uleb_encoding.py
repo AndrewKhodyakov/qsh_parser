@@ -4,6 +4,7 @@
 """
 import unittest
 from itertools import count
+from itertools import chain
 
 class BaseLEB128:
     """
@@ -95,21 +96,27 @@ class BaseLEB128:
         return out
 
 
-    def decode_from_stream(self, stream):
+    def decode_from_stream(self, stream, method=None):
         """
         If bytes reading from stream
-        stream: input
+        stream: stream obj
+        method: method to get data
         """
+        if not method:
+            msg = 'Set method to get data from stream'
+            raise AttributeError(msg)
+
         out = 0
         step = count(0)
 
         while True:
-            byte = stream.read()
+            byte = getattr(stream, method)()
             out = out | (byte << 8*next(step))
 
             if (byte & 128) == 0:
                 break
 
+        out = out.to_bytes(next(step), byteorder='little')
         return  self.decode(out)
 
 
@@ -166,6 +173,7 @@ class TestSleb128EncodeDecode(unittest.TestCase):
         self.number = -624485
         self.bytes = b'\x9b\xf1Y'
         self.sleb128 = Sleb128(3)
+        self.stream = chain(self.bytes)
 
     def test_encode(self):
         """
@@ -178,6 +186,13 @@ class TestSleb128EncodeDecode(unittest.TestCase):
         decode
         """
         self.assertEqual(self.number, self.sleb128.decode(self.bytes))
+
+    def test_decode_stream(self):
+        """
+        Test for stream decoding
+        """
+        self.assertEqual(self.number, self.sleb128.decode_from_stream(
+            self.stream, '__next__'))
 
 if __name__ == "__main__":
     unittest.main()
