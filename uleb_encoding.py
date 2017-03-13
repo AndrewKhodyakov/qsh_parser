@@ -100,11 +100,11 @@ class BaseLEB128:
         step = count(1)
         out = 0
 
-        strip_first_byte = [byte & 127 for byte in self.to_decode]
+        strip_first_bite_bytes = [byte & 127 for byte in self.to_decode]
 
-        strip_first_byte.reverse()
+        strip_first_bite_bytes.reverse()
 
-        for byte in strip_first_byte:
+        for byte in strip_first_bite_bytes:
             out = out | byte << 7*(byte_number - next(step))
 
         if self.__check_number_sign:
@@ -118,6 +118,7 @@ class BaseLEB128:
         If bytes reading from stream
         stream: stream obj
         method: method to get data
+        method_args: reading method args
         """
         if not method:
             msg = 'Set method to get data from stream'
