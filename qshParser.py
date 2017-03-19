@@ -29,14 +29,15 @@ class BaseTypes:
     """
     Base types - a don`t require to save condition
     """
-    data_types = dict.fromkeys(['byte', 'uint16', 'uint32', 'int64',
-'DateTime'])
+    data_types = dict.fromkeys(\
+        ['_byte', '_uint16', '_uint32', '_int64', '_datetime', '_double'])
+
     def __init__(self):
         """
             init  - setup data types and their params for decoding
         """
         for inst in data_types:
-            self.__dict['_' + inst] = namedtuple(k,['cursor_step','unpack_code'])
+            self.__dict__[inst] = namedtuple(k,['cursor_step','unpack_code'])
 
         self._byte.cursor_step = 1
         self._byte.unpack_code = 'B'
@@ -48,10 +49,13 @@ class BaseTypes:
         self._uint32.unpack_code = None
 
         self._int64.cursor_step = 8
-        self._int64.unpack_code = None
+        self._int64.unpack_code = 'q'
 
-        self._DateTime.cursor_step = self._int64.cursor_step
-        self._DateTime.unpack_code ='q'
+        self._double.cursor_step = self._int64.cursor_step
+        self._double.unpack_code = 'd'
+
+        self._datetime.cursor_step = self._int64.cursor_step
+        self._datetime.unpack_code = self._int64.unpack_code
 
         self._uleb128 = Uleb128(self._uint32.cursor_step)
         self._sleb128 = Sleb128(self._int64.cursor_step)
@@ -63,48 +67,109 @@ class BaseTypes:
         """
         out = None
         if self.getattr(attr).unpack_code:
-            stream.read(self.getattr(attr).cursor_step)
+            out = struct.unpack(self.getattr(attr).unpack_code,
+            stream.read(self.getattr(attr).cursor_step))
+            if len(out) > 0:
+                out = out[0]
         else:
-            stream.read(self.getattr(attr).cursor_step)
+            out = stream.read(self.getattr(attr).cursor_step)
+
         return out
 
-    def read_uint16(self, stream):
+
+    def read_byte(self, stream):
         """
         Read uint_16
         """
         return self._read('_byte', stream)
 
+    def read_uint16(self, stream):
+        """
+        Read uint_16
+        """
+        return self._read('_uint16', stream)
+
+
     def read_uint32(self, stream):
         """
         Read uint_32
         """
-        return self._read('_byte', stream)
+        return self._read('_uint32', stream)
+
 
     def read_int64(self, stream):
         """
         Read int_64
         """
-        return self._read('_byte', stream)
+        return self._read('_int64', stream)
+
+
+    def read_double(self, stream):
+        """
+        Read int_64
+        """
+        return self._read('_double', stream)
+
 
     def read_datetime(self, stream):
         """
         Read datetime
+        ----------------
+        Тип DateTime представляет собой число, показывающее количество
+        100-наносекундных интервалов, которые прошли с полночи 00:00:00,
+        1 января 0001 года. Соответствует свойству Ticks структуры DateTime
+        из .NET версии 4. Сохраняется в поле типа int64
         """
-        return self._read('_byte', stream)
+        out = None
+        nano_seconds = self._read('_int64', stream)
+        if nano_seconds:
+            if len(nano_seconds) > 0:
+                out = (datetime(1, 1, 1) + timedelta(microseconds = nano_seconds[0]/10))
+        return out
+
 
     def read_uleb(self, stream):
         """
         Read uleb 128
         """
-        return self._uleb128.decode_from_stream(
-            stream, 'read', 1)
+        return self._uleb128.decode_from_stream(stream, 'read', 1)
+
 
     def read_sleb(self, stream):
         """
         Read sleb 128
         """
-        return self._sleb128.decode_from_stream(
-            stream, 'read', 1)
+        return self._sleb128.decode_from_stream(stream, 'read', 1)
+
+
+    def read_string(self, stream):
+        """
+        Read utf8 encoded byte array 
+        Тип String является комплексным и состоит из следующих компонентов:
+        - uleb128 - длинна массива - число бит для чтения
+        """
+        return bytes.decode(stream.read(self.read_uleb(stream)))
+
+
+class RealtiveType(BaseTypes):
+    """
+    """
+    def __init__(self):
+        pass
+
+class Growing(BaseTypes):
+    """
+    """
+    def __init__(self):
+        pass
+
+
+class GrowingDateTime(BaseTypes):
+    """
+    """
+    def __init__(self, start_time):
+        pass
+
 
 class DataStructReadingMethods(object):
     """
