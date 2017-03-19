@@ -4,13 +4,14 @@
 """
     Парсер_файлов_qsh по спецификации версии 4
 """
-#===============================================================================
 import os 
 import itertools
 from  collections  import namedtuple
 import struct
 from datetime import datetime, timedelta
-#==============================================================================
+from leb_128 import Uleb128, Sleb128
+
+
 class General(Exception):
     def __init__(self, msg):
         self.msg = msg
@@ -23,6 +24,87 @@ class FileNotExists(General):
 class FileSignatureError(General):
     def __init__(self,msg):
         General.__init__(self, msg)
+
+class BaseTypes:
+    """
+    Base types - a don`t require to save condition
+    """
+    data_types = dict.fromkeys(['byte', 'uint16', 'uint32', 'int64',
+'DateTime'])
+    def __init__(self):
+        """
+            init  - setup data types and their params for decoding
+        """
+        for inst in data_types:
+            self.__dict['_' + inst] = namedtuple(k,['cursor_step','unpack_code'])
+
+        self._byte.cursor_step = 1
+        self._byte.unpack_code = 'B'
+
+        self._uint16.cursor_step = 2
+        self._uint16.unpack_code = None
+
+        self._uint32.cursor_step = 4
+        self._uint32.unpack_code = None
+
+        self._int64.cursor_step = 8
+        self._int64.unpack_code = None
+
+        self._DateTime.cursor_step = self._int64.cursor_step
+        self._DateTime.unpack_code ='q'
+
+        self._uleb128 = Uleb128(self._uint32.cursor_step)
+        self._sleb128 = Sleb128(self._int64.cursor_step)
+
+
+    def _read(self, attr, stream):
+        """
+        Read value from stream by type
+        """
+        out = None
+        if self.getattr(attr).unpack_code:
+            stream.read(self.getattr(attr).cursor_step)
+        else:
+            stream.read(self.getattr(attr).cursor_step)
+        return out
+
+    def read_uint16(self, stream):
+        """
+        Read uint_16
+        """
+        return self._read('_byte', stream)
+
+    def read_uint32(self, stream):
+        """
+        Read uint_32
+        """
+        return self._read('_byte', stream)
+
+    def read_int64(self, stream):
+        """
+        Read int_64
+        """
+        return self._read('_byte', stream)
+
+    def read_datetime(self, stream):
+        """
+        Read datetime
+        """
+        return self._read('_byte', stream)
+
+    def read_uleb(self, stream):
+        """
+        Read uleb 128
+        """
+        return self._uleb128.decode_from_stream(
+            stream, 'read', 1)
+
+    def read_sleb(self, stream):
+        """
+        Read sleb 128
+        """
+        return self._sleb128.decode_from_stream(
+            stream, 'read', 1)
 
 class DataStructReadingMethods(object):
     """
