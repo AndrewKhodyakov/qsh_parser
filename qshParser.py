@@ -153,12 +153,14 @@ class BaseTypes:
 
 class RealtiveType(BaseTypes):
     """
+    It requires to stope last step value
     """
     def __init__(self):
         pass
 
 class Growing(BaseTypes):
     """
+    It requires to stope last step value
     """
     def __init__(self):
         pass
@@ -166,6 +168,7 @@ class Growing(BaseTypes):
 
 class GrowingDateTime(BaseTypes):
     """
+    It requires to stope last step value
     """
     def __init__(self, start_time):
         pass
