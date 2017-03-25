@@ -4,7 +4,7 @@
 """
     Парсер_файлов_qsh по спецификации версии 4
 """
-import os 
+import os, sys
 import itertools
 from  collections  import namedtuple
 import struct
@@ -466,19 +466,40 @@ class QshParser(object):
                            {0}'.format(self.stream_headers[k].instrument_code))
             print(u'-'*40 + u'\n')
 
-#---------------------------------
-if __name__ == "__main__":
+def _read_mode(path_to_file):
+    """
+    read from file
+    path_to_file: full path to file
+    """
+    qsh = QshParser(path_to_file)
+    qsh.read_file_metadata()
+    qsh.print_file_metadata()
+    qsh.print_strems_headers()
 
-    import os, sys
+def _run_unittests():
+    """
+    run tests
+    """
+    print('Run unittests')
 
-    if len(sys.argv) < 2:
-        print('Вторым аргументом надо подавать путь к файлу с данными qsh.')
+def _if__name__is__main():
+    """
+    main func
+    """
+    arg = sys.argv
+    msg = 'Input next arguments:\n'
+    msg = msg + '\t' + '--run_self_test - for run unittests;\n'
+    msg = msg + '\t' + '--read_file full_path_to_file - for read from file.\n'
+    if len(arg) == 1:
+        print(msg)
     else:
-        path_to_qsh = os.path.abspath(sys.argv[1])
-        if os.path.exists(path_to_qsh):
-            qsh = QshParser(path_to_qsh)
-            qsh.read_file_metadata()
-            qsh.print_file_metadata()
-            qsh.print_strems_headers()
+        if '--run_self_test' in arg[1]:
+            _run_unittests()
+        elif '--read_file' in arg[1]:
+            _read_mode(arg[2])
         else:
-            print('Файл {0}  не найден!'.format(path_to_qsh))
+            print(msg)
+
+
+if __name__ == "__main__":
+    _if__name__is__main()
