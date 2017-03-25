@@ -483,25 +483,51 @@ def _run_unittests():
     """
     run tests
     """
-    print('Run unittests')
+    import unittest
+    class TestBaseTypes(unittest.TestCase):
+        """
+        BaseTypes tests
+        """
+        def _get_stream(self):
+            """
+            get stream
+            """
+            f = opne()
+        def setUp(self):
+            """
+            save etalons
+            """
+            self.one_byte = b'\x04'
+            self.string = b'\x0eQshWriter.5488'
+            self.date_time = b'\x00wb\x9c\xcd"\xd2\x08'
+            self.base = BaseTypes()
+
+        def test_a_simple(self):
+            """
+            tests
+            """
+            self.assertEqual(self.base.read_byte())
+            self.assertEqual()
+            self.assertEqual()
+
 
 def _if__name__is__main():
     """
     main func
     """
     arg = sys.argv
-    msg = 'Input next arguments:\n'
-    msg = msg + '\t' + '--run_self_test - for run unittests;\n'
-    msg = msg + '\t' + '--read_file full_path_to_file - for read from file.\n'
+    help_msg = 'Input next arguments:\n'
+    help_msg = help_msg + '\t' + '--run_self_test - for run unittests;\n'
+    help_msg = help_msg + '\t' + '--read_file full_path_to_file - for read from file.\n'
     if len(arg) == 1:
-        print(msg)
+        print(help_msg)
     else:
         if '--run_self_test' in arg[1]:
             _run_unittests()
         elif '--read_file' in arg[1]:
             _read_mode(arg[2])
         else:
-            print(msg)
+            print(help_msg)
 
 
 if __name__ == "__main__":
