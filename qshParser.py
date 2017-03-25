@@ -8,7 +8,7 @@ import os, sys
 import itertools
 from  collections  import namedtuple
 import struct
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from leb_128 import Uleb128, Sleb128
 
 
@@ -36,8 +36,8 @@ class BaseTypes:
         """
             init  - setup data types and their params for decoding
         """
-        for inst in data_types:
-            self.__dict__[inst] = namedtuple(k,['cursor_step','unpack_code'])
+        for inst in self.data_types:
+            self.__dict__[inst] = namedtuple(inst,['cursor_step','unpack_code'])
 
         self._byte.cursor_step = 1
         self._byte.unpack_code = 'B'
@@ -66,13 +66,13 @@ class BaseTypes:
         Read value from stream by type
         """
         out = None
-        if self.getattr(attr).unpack_code:
-            out = struct.unpack(self.getattr(attr).unpack_code,
-            stream.read(self.getattr(attr).cursor_step))
+        if getattr(self, attr).unpack_code:
+            out = struct.unpack(getattr(self, attr).unpack_code,
+            stream.read(getattr(self, attr).cursor_step))
             if len(out) > 0:
                 out = out[0]
         else:
-            out = stream.read(self.getattr(attr).cursor_step)
+            out = stream.read(getattr(self, attr).cursor_step)
 
         return out
 
@@ -123,8 +123,7 @@ class BaseTypes:
         out = None
         nano_seconds = self._read('_int64', stream)
         if nano_seconds:
-            if len(nano_seconds) > 0:
-                out = (datetime(1, 1, 1) + timedelta(microseconds = nano_seconds[0]/10))
+            out = (datetime(1, 1, 1) + timedelta(microseconds = nano_seconds/10))
         return out
 
 
@@ -455,6 +454,7 @@ class QshParser(object):
         print(u'Data stream count:\
                             {0}'.format(self.file_header.stream_count))
 
+
     def print_strems_headers(self):
         """
         Вывод информации о потоках имеющихся в файле
@@ -469,6 +469,7 @@ class QshParser(object):
                            {0}'.format(self.stream_headers[k].instrument_code))
             print(u'-'*40 + u'\n')
 
+
 def _read_mode(path_to_file):
     """
     read from file
@@ -479,37 +480,38 @@ def _read_mode(path_to_file):
     qsh.print_file_metadata()
     qsh.print_strems_headers()
 
+
 def _run_unittests():
     """
     run tests
     """
+    from io import BytesIO
     import unittest
+
     class TestBaseTypes(unittest.TestCase):
         """
         BaseTypes tests
         """
-        def _get_stream(self):
-            """
-            get stream
-            """
-            f = opne()
         def setUp(self):
             """
             save etalons
             """
-            self.one_byte = b'\x04'
-            self.string = b'\x0eQshWriter.5488'
-            self.date_time = b'\x00wb\x9c\xcd"\xd2\x08'
+            self.one_byte = BytesIO(b'\x04')
+            self.string = BytesIO(b'\x0eQshWriter.5488')
+            self.date_time = BytesIO(b'\x00wb\x9c\xcd"\xd2\x08')
             self.base = BaseTypes()
 
         def test_a_simple(self):
             """
-            tests
+            test elementary types
             """
-            self.assertEqual(self.base.read_byte())
-            self.assertEqual()
-            self.assertEqual()
+            self.assertEqual(self.base.read_byte(self.one_byte), 4)
+            self.assertEqual(self.base.read_string(self.string), 'QshWriter.5488')
+            self.assertEqual(self.base.read_datetime(self.date_time).date(),date(year=2015, month=3, day=2))
 
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestBaseTypes))
+    unittest.TextTestRunner().run(suite)
 
 def _if__name__is__main():
     """
