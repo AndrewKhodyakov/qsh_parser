@@ -264,17 +264,20 @@ class QSHParser:
         self._file_header = namedtuple('FileHeader',\
             ['signature', 'format_version', 'app_name', 'user_comment',\
             'time_record', 'stream_count', 'head_len'])
-        self._stream_structs = []
+        self._streams_structs = []
         self._frames = []
 
     def _read_file_header(self):
+        """
+        Выходит так - после чтения заголовка файла - становиться понятно, что
+        это за файл и какие в нем данные - создаются соотвествующие структуы  в памяти.
+        Далее мы пошагово делая next получаем данные из файла
+        """
         pass
 
     def _add_new_stream_struct(self):
         pass
 
-    def full_on(self):
-        pass
 
 class DataStructReadingMethods(object):
     """
