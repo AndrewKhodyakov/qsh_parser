@@ -166,9 +166,8 @@ class RelativeType(BaseTypes):
         _last: previos
         _sleb128: base type
         """
-#        base = BaseTypes()
+        super(RelativeType, self).__init__()
         self._last = 0
-#        self._sleb128 = base._sleb128
 
     def read(self, stream):
         """
@@ -177,7 +176,7 @@ class RelativeType(BaseTypes):
         Первая разность берется относительно нуля.
         """
         out = None
-        tmp = self._sleb128.decode_from_stream(stream, 'read', 1)
+        tmp = self.read_sleb(stream)
         out = tmp - self._last
         self._last = tmp
         return out
@@ -198,18 +197,16 @@ class Growing(BaseTypes):
             разность между текущим и предыдущим значением, если предыдущее поле
             содержит число 268435455; в ином случае данное поле отсутствует
         """
-#        base = BaseTypes()
-#        self._uleb128 = base._uleb128
-#        self._sleb128 = base._sleb128
+        super(Growing, self).__init__()
         self._last = 0
 
     def read(self, stream):
         """
         """
         out = None
-        tmp = self._uleb128.decode_from_stream(stream, 'read', 1)
+        tmp = self.read_uleb(stream)
         if tmp >= 268435454:
-            tmp = self._sleb128.decode_from_stream(stream, 'read', 1)
+            tmp = self.read_sleb(stream)
 
         out  = tmp - self._last
         self._last = out
@@ -235,8 +232,8 @@ class GrowingDateTime:
     def read(self, stream):
         """
         После долгих экспериментов остановился на следующей схеме:
-            Growing - это количество микросекунд от стартового времени в 
-            считанного в начале файла.
+            Growing - это количество миллисекунд от стартового времени 
+            ссчитанного в заголовке файла.
         """
         return self._start + timedelta(microseconds=\
             (self._base.read(stream)*1000))
@@ -263,14 +260,18 @@ class QSHParser:
             msg = u'Путь к файлу {0} не найден'.format(path_to_file)
             raise FileNotExists(msg)
 
-        self.stream = open(path_to_file, 'rb')
-        self.file_header = namedtuple('FileHeader',
-                                            ['signature',
-                                            'format_version',
-                                            'app_name',
-                                            'user_comment',
-                                            'time_record',
-                                            'stream_count',])
+        self._stream = open(path_to_file, 'rb')
+        self._file_header = namedtuple('FileHeader',\
+            ['signature', 'format_version', 'app_name', 'user_comment',\
+            'time_record', 'stream_count', 'head_len'])
+        self._stream_structs = []
+        self._frames = []
+
+    def _read_file_header(self):
+        pass
+
+    def _add_new_stream_struct(self):
+        pass
 
     def full_on(self):
         pass
