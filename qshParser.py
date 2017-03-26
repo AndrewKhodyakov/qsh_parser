@@ -155,23 +155,101 @@ class RealtiveType(BaseTypes):
     It requires to stope last step value
     """
     def __init__(self):
-        pass
+        """
+        _last: previos
+        _sleb128: base type
+        """
+        base = BaseTypes()
+        self._last = 0
+        self._sleb128 = Sleb128(base._int64.cursor_step)
+
+    def read(self, stream):
+        """
+        Тип Relative представляет собой число, закодированное в формате Leb128,
+        показывающее разность между текущим значением и предыдущим.
+        Первая разность берется относительно нуля.
+        """
+        out = None
+        tmp = self._sleb128.decode_from_stream(stream, 'read', 1)
+        out = tmp - self._last
+        self._last = tmp
+        return out
 
 class Growing(BaseTypes):
     """
     It requires to stope last step value
     """
     def __init__(self):
-        pass
+        """
+        Тип Growing является комплексным и состоит из одного или двух компонентов:
+        uleb128:
+            разность между текущим и предыдущим значением;
+            если данная разность меньше нуля или больше 268435454,
+            в этом поле указывается число 268435455, а значение разности указывается
+            в следующем поле
+        selb128:
+            разность между текущим и предыдущим значением, если предыдущее поле
+            содержит число 268435455; в ином случае данное поле отсутствует
+        """
+        base = BaseTypes()
+        self._uleb128 = Uleb128(base._uint32.cursor_step)
+        self._sleb128 = Sleb128(base._int64.cursor_step)
+        self._last = 0
 
+    def read(self, stream):
+        """
+        """
+        out = None
+        tmp = self._uleb128.decode_from_stream(stream, 'read', 1)
+        if tmp >= 268435454:
+            tmp = self._sleb128.decode_from_stream(stream, 'read', 1)
+
+        out  = tmp - self._last
+        self._last = out
+        return out
 
 class GrowingDateTime(BaseTypes):
     """
     It requires to stope last step value
     """
     def __init__(self, start_time):
-        pass
+        """
+        Тип GrowDateTime представляет собой количество миллисекунд,
+        которые прошли с полночи 00:00:00, 1 января 0001 года.
+        Соответствует свойству Ticks структуры DateTime из .NET версии 4,
+        деленому на константу TimeSpan.TicksPerMillisecond.
+        Сохраняется в поле типа Growing.
 
+        start_time: начало отсчета 
+        """
+        self._start = start_time
+        self._base = Growing()
+
+    def read(self, stream):
+        """
+        После долгих экспериментов остановился на следующей схеме:
+            Growing - это количество микросекунд от стартового времени в 
+            считанного в начале файла.
+        """
+        return self._start + timedelta(microseconds=\
+            (self._base.read(stream)*1000))
+
+class QSHParser:
+    """
+        Парсер:
+        Структура файла:
+        Заголовок файла
+            - заголовок потока 1,
+            .......... 
+            - заголовок потока n(при наличии),
+                - заголовок кадра 1,
+                - данные кадра 1,
+                .......... 
+                - заголовок кадра n,
+                - данные кадра n,
+    """
+    def __init__(self):
+    def full_on(self):
 
 class DataStructReadingMethods(object):
     """
