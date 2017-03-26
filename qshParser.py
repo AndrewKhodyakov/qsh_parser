@@ -66,13 +66,20 @@ class BaseTypes:
         Read value from stream by type
         """
         out = None
-        if getattr(self, attr).unpack_code:
-            out = struct.unpack(getattr(self, attr).unpack_code,
-            stream.read(getattr(self, attr).cursor_step))
-            if len(out) > 0:
-                out = out[0]
-        else:
-            out = stream.read(getattr(self, attr).cursor_step)
+        try:
+            if getattr(self, attr).unpack_code:
+                out = struct.unpack(getattr(self, attr).unpack_code,
+                stream.read(getattr(self, attr).cursor_step))
+                if len(out) > 0:
+                    out = out[0]
+            else:
+                out = stream.read(getattr(self, attr).cursor_step)
+
+        except Exception as e:
+            msg = \
+            'Got exception - {0}, details:\n\t- cursor position {1}\n;\t- file {2}'.\
+            format(e, stream.tell())
+            raise Exception(msg)
 
         return out
 
@@ -159,9 +166,9 @@ class RelativeType(BaseTypes):
         _last: previos
         _sleb128: base type
         """
-        base = BaseTypes()
+#        base = BaseTypes()
         self._last = 0
-        self._sleb128 = Sleb128(base._int64.cursor_step)
+#        self._sleb128 = base._sleb128
 
     def read(self, stream):
         """
@@ -191,9 +198,9 @@ class Growing(BaseTypes):
             разность между текущим и предыдущим значением, если предыдущее поле
             содержит число 268435455; в ином случае данное поле отсутствует
         """
-        base = BaseTypes()
-        self._uleb128 = Uleb128(base._uint32.cursor_step)
-        self._sleb128 = Sleb128(base._int64.cursor_step)
+#        base = BaseTypes()
+#        self._uleb128 = base._uleb128
+#        self._sleb128 = base._sleb128
         self._last = 0
 
     def read(self, stream):
@@ -208,7 +215,7 @@ class Growing(BaseTypes):
         self._last = out
         return out
 
-class GrowingDateTime(BaseTypes):
+class GrowingDateTime:
     """
     It requires to stope last step value
     """
