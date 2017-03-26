@@ -150,7 +150,7 @@ class BaseTypes:
         return bytes.decode(stream.read(self.read_uleb(stream)))
 
 
-class RealtiveType(BaseTypes):
+class RelativeType(BaseTypes):
     """
     It requires to stope last step value
     """
@@ -248,8 +248,25 @@ class QSHParser:
                 - заголовок кадра n,
                 - данные кадра n,
     """
-    def __init__(self):
+    def __init__(self, path_to_file):
+        """
+        path_to_file - путь к файлу формата qsh
+        """
+        if not os.path.exists(path_to_file):
+            msg = u'Путь к файлу {0} не найден'.format(path_to_file)
+            raise FileNotExists(msg)
+
+        self.stream = open(path_to_file, 'rb')
+        self.file_header = namedtuple('FileHeader',
+                                            ['signature',
+                                            'format_version',
+                                            'app_name',
+                                            'user_comment',
+                                            'time_record',
+                                            'stream_count',])
+
     def full_on(self):
+        pass
 
 class DataStructReadingMethods(object):
     """
@@ -566,7 +583,7 @@ def _run_unittests():
     from io import BytesIO
     import unittest
 
-    class TestBaseTypes(unittest.TestCase):
+    class TestTypeClassess(unittest.TestCase):
         """
         BaseTypes tests
         """
@@ -577,7 +594,19 @@ def _run_unittests():
             self.one_byte = BytesIO(b'\x04')
             self.string = BytesIO(b'\x0eQshWriter.5488')
             self.date_time = BytesIO(b'\x00wb\x9c\xcd"\xd2\x08')
+
+            self.relative_data_one = BytesIO(b'\x9b\xf1Y')
+            self.relative_data_two = BytesIO(b'\x9b\xf1Y')
+            self.growing_uleb_one = BytesIO(b'\xe5\x8e&')
+            self.growing_uleb_two = BytesIO(b'\xe5\x8e&')
+            self.growing_uleb_sleb = BytesIO(b'\xfe\xff\xff\x7f\x01')
+            self.growing_datetime_data = BytesIO(b'\xb9$')
+
             self.base = BaseTypes()
+            self.relative = RelativeType()
+            self.growing = Growing()
+            self.base_time = datetime.now()
+            self.growing_datetime = GrowingDateTime(self.base_time)
 
         def test_a_simple(self):
             """
@@ -587,8 +616,26 @@ def _run_unittests():
             self.assertEqual(self.base.read_string(self.string), 'QshWriter.5488')
             self.assertEqual(self.base.read_datetime(self.date_time).date(),date(year=2015, month=3, day=2))
 
+        def test_b_complex(self):
+            """
+            test complex types
+            """
+            #relative
+            self.relative.read(self.relative_data_one)
+            self.assertEqual(self.relative.read(self.relative_data_two), 0)
+
+            #growing
+            self.growing.read(self.growing_uleb_one)
+            self.assertEqual(self.growing.read(self.growing_uleb_two), 0)
+
+            self.assertEqual(self.growing.read(self.growing_uleb_sleb), 1)
+
+            #growing datetime
+            self.assertEqual((self.growing_datetime.read(self.growing_datetime_data)\
+                - self.base_time).seconds, 4)
+
     suite = unittest.TestSuite()
-    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestBaseTypes))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestTypeClassess))
     unittest.TextTestRunner().run(suite)
 
 def _if__name__is__main():
