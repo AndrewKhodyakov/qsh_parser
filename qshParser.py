@@ -238,6 +238,7 @@ class GrowingDateTime:
         return self._start + timedelta(microseconds=\
             (self._base.read(stream)*1000))
 
+
 class QSHParser:
     """
         Парсер:
@@ -645,6 +646,9 @@ def _run_unittests():
             self.assertEqual((self.growing_datetime.read(self.growing_datetime_data)\
                 - self.base_time).seconds, 4)
 
+        def test_c_data_struct(self):
+            pass
+
     suite = unittest.TestSuite()
     suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestTypeClassess))
     unittest.TextTestRunner().run(suite)
@@ -654,9 +658,10 @@ def _if__name__is__main():
     main func
     """
     arg = sys.argv
-    help_msg = 'Input next arguments:\n'
-    help_msg = help_msg + '\t' + '--run_self_test - for run unittests;\n'
-    help_msg = help_msg + '\t' + '--read_file full_path_to_file - for read from file.\n'
+    help_msg = """Input next arguments:\n
+        --run_self_test - for run unittests;\n
+        --read_file full_path_to_file - for read from file.\n"""
+
     if len(arg) == 1:
         print(help_msg)
     else:
