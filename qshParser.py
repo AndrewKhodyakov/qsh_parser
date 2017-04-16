@@ -214,7 +214,7 @@ class Growing(BaseTypes):
 
 class GrowingDateTime:
     """
-    It requires to stope last step value
+    It requires to store last step value
     """
     def __init__(self, start_time):
         """
@@ -237,6 +237,68 @@ class GrowingDateTime:
         """
         return self._start + timedelta(microseconds=\
             (self._base.read(stream)*1000))
+
+class Stock:
+    """
+    Stock data
+    """
+    def __init__(stream):
+        """
+        set quotes count
+        """
+        self.quotes_count = BaseTypes().read_sleb(stream)
+        self._quote = namedtuple('Quote', ['rate','volume'])
+        self.quotes = None
+
+    def set_quotes(self, stream):
+        """
+        set quotes values
+        """
+        pass
+
+    def update_quotes(self, stream):
+        pass
+
+class Trades:
+    """
+    Trades stream
+    """
+    def __init__(self):
+        """
+        create data struct
+        """
+        for key in ['_trade_type', '_exchange_date_time', '_exchange_trade_number',\
+            '_bid_number', '_transaction_price', '_transaction_volume', '_open_interest']:
+            self.__dict__['key'] = namedtuple(key, ['value', 'data_type', 'bit_mask'])
+
+        self._trade_type.bit_mask = 3
+
+        self._exchange_date_time.data_type = GrowingDateTime
+        self._exchange_date_time.bit_mask = 4
+
+        self._exchange_trade_number.data_type = Growing()
+        self._exchange_trade_number.bit_mask = 8
+
+        self._bid_number.data_type = RelativeType()
+        self._bid_number.bit_mask = 16
+
+        self._transaction_price.data_type = RelativeType()
+        self._transaction_price.bit_mask = 32 
+
+        self._transaction_volume.data_type = BaseTypes()
+        self._transaction_volume.bit_mask = 64
+
+        self._open_interest.data_type = RelativeType()
+        self._open_interest.bit_mask = 128
+
+
+    def read(self, stream):
+        """
+        stream
+        """
+        #TODO - считываем маску, определяем по маске какой тип данных надо
+        #считать из потока
+        pass
 
 
 class QSHParser:
