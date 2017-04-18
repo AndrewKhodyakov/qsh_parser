@@ -269,11 +269,12 @@ class Trades:
         """
         for key in ['_trade_type', '_exchange_date_time', '_exchange_trade_number',\
             '_bid_number', '_transaction_price', '_transaction_volume', '_open_interest']:
-            self.__dict__['key'] = namedtuple(key, ['value', 'data_type', 'bit_mask'])
+                setattr(self, key, namedtuple(key, ['value', 'data_type', 'bit_mask']))
 
+        self._mask = BaseTypes()
         self._trade_type.bit_mask = 3
 
-        self._exchange_date_time.data_type = GrowingDateTime
+        self._exchange_date_time.data_type = GrowingDateTime()
         self._exchange_date_time.bit_mask = 4
 
         self._exchange_trade_number.data_type = Growing()
@@ -296,9 +297,44 @@ class Trades:
         """
         stream
         """
-        #TODO - считываем маску, определяем по маске какой тип данных надо
-        #считать из потока
-        pass
+        mask = self._mask.read_byte(stream)
+
+        self._set_trade_direction(mask, stream)
+
+        for key in ['_exchange_date_time', '_exchange_trade_number',\
+            '_bid_number', '_transaction_price', '_transaction_volume', '_open_interest']:
+            attr = getattr(self, key)
+
+            if (mask & attr.bit_mask) == attr.bit_mask:
+                attr.value = attr.data_type.read(stream)
+
+            elif (mask & attr.bit_mask) == 0:
+                pass
+
+            else: 
+                msg = 'Can`t read {} in file {} - position {}'.format(\
+                    key, stream.name, stream.tell())
+                raise TypeError(msg)
+
+
+    def _set_trade_direction(self, mask, stream):
+        """
+        Устанавливаем направление сделки
+        mask: маска
+        """
+        if (mask & self._trade_type.bit_mask) == 0:
+            self._trade_type.value = 'UNKNOWN'
+
+        elif (mask & self._trade_type.bit_mask) == 1:
+            self._trade_type.value = 'ASK'
+
+        elif (mask & self._trade_type.bit_mask) == 2:
+            self._trade_type.value = 'BID'
+
+        else:
+            msg = 'Can`t defaune trade direction file: {} - position: {}'.\
+                format(stream.name, struct.tell())
+            raise TypeError(msg)
 
 
 class QSHParser:
@@ -676,11 +712,15 @@ def _run_unittests():
             self.growing_uleb_sleb = BytesIO(b'\xfe\xff\xff\x7f\x01')
             self.growing_datetime_data = BytesIO(b'\xb9$')
 
+            #TODO дописывай тестовые данные для структуры трейд
+            self.trades_data = BytesIO()
+
             self.base = BaseTypes()
             self.relative = RelativeType()
             self.growing = Growing()
             self.base_time = datetime.now()
             self.growing_datetime = GrowingDateTime(self.base_time)
+            self.trade = Trades()
 
         def test_a_simple(self):
             """
@@ -709,6 +749,9 @@ def _run_unittests():
                 - self.base_time).seconds, 4)
 
         def test_c_data_struct(self):
+            """
+            test data struct
+            """
             pass
 
     suite = unittest.TestSuite()
