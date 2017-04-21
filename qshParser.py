@@ -216,7 +216,7 @@ class GrowingDateTime:
     """
     It requires to store last step value
     """
-    def __init__(self, start_time):
+    def __init__(self, start_time=None):
         """
         Тип GrowDateTime представляет собой количество миллисекунд,
         которые прошли с полночи 00:00:00, 1 января 0001 года.
@@ -226,7 +226,11 @@ class GrowingDateTime:
 
         start_time: начало отсчета 
         """
-        self._start = start_time
+        if start_time:
+            self._start = start_time
+        else:
+            self._start = datetime(1, 1, 1)
+
         self._base = Growing()
 
     def read(self, stream):
@@ -235,8 +239,12 @@ class GrowingDateTime:
             Growing - это количество миллисекунд от стартового времени 
             ссчитанного в заголовке файла.
         """
-        return self._start + timedelta(microseconds=\
-            (self._base.read(stream)*1000))
+        delta = timedelta(microseconds=(self._base.read(stream)*1000))
+        if delta.days > 1:
+            self._start = self._start + delta
+            return self._start
+        else:
+            return self._start + delta
 
 class Stock:
     """
@@ -306,7 +314,10 @@ class Trades:
             attr = getattr(self, key)
 
             if (mask & attr.bit_mask) == attr.bit_mask:
-                attr.value = attr.data_type.read(stream)
+                if key == '_transaction_volume':
+                    attr.value = attr.data_type.read_sleb(stream)
+                else:
+                    attr.value = attr.data_type.read(stream)
 
             elif (mask & attr.bit_mask) == 0:
                 pass
@@ -333,7 +344,7 @@ class Trades:
 
         else:
             msg = 'Can`t defaune trade direction file: {} - position: {}'.\
-                format(stream.name, struct.tell())
+                format(stream.name, stream.tell())
             raise TypeError(msg)
 
 
