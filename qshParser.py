@@ -347,6 +347,11 @@ class Trades:
                 format(stream.name, stream.tell())
             raise TypeError(msg)
 
+    def __str__(self):
+        """
+        Вывод данных об одной сделке
+        """
+        pass
 
 class QSHParser:
     """
@@ -723,8 +728,8 @@ def _run_unittests():
             self.growing_uleb_sleb = BytesIO(b'\xfe\xff\xff\x7f\x01')
             self.growing_datetime_data = BytesIO(b'\xb9$')
 
-            #TODO дописывай тестовые данные для структуры трейд
-            self.trades_data = BytesIO()
+            self.trades_data = BytesIO(\
+                b'\xad@f\xff\xff\xff\x7f\x98\xca\xe9\xe0\xee\xb9\x0e\x92\xf7\x00\n')
 
             self.base = BaseTypes()
             self.relative = RelativeType()
