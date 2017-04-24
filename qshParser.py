@@ -5,6 +5,7 @@
     Парсер_файлов_qsh по спецификации версии 4
 """
 import os, sys
+import json
 import itertools
 from  collections  import namedtuple
 import struct
@@ -281,24 +282,31 @@ class Trades:
 
         self._mask = BaseTypes()
         self._trade_type.bit_mask = 3
+        self._trade_type.value = None
 
         self._exchange_date_time.data_type = GrowingDateTime()
         self._exchange_date_time.bit_mask = 4
+        self._exchange_date_time.value = None
 
         self._exchange_trade_number.data_type = Growing()
         self._exchange_trade_number.bit_mask = 8
+        self._exchange_trade_number.value = None
 
         self._bid_number.data_type = RelativeType()
         self._bid_number.bit_mask = 16
+        self._bid_number.value = None
 
         self._transaction_price.data_type = RelativeType()
         self._transaction_price.bit_mask = 32 
+        self._transaction_price.value = None
 
         self._transaction_volume.data_type = BaseTypes()
         self._transaction_volume.bit_mask = 64
+        self._transaction_volume.value = None
 
         self._open_interest.data_type = RelativeType()
         self._open_interest.bit_mask = 128
+        self._open_interest.value = None
 
 
     def read(self, stream):
@@ -347,11 +355,27 @@ class Trades:
                 format(stream.name, stream.tell())
             raise TypeError(msg)
 
-    def __str__(self):
+    @property
+    def data(self):
+        """
+        Convert all data to dict
+        """
+        out = {}
+        for key in ['_trade_type', '_exchange_date_time', '_exchange_trade_number',\
+        '_bid_number', '_transaction_price', '_transaction_volume', '_open_interest']:
+            tmp = getattr(self, key).value
+            if key == '_exchange_date_time':
+                tmp = tmp.isoformat()
+
+            out[key.strip('_')] = tmp
+
+        return out
+
+    def __repr__(self):
         """
         Вывод данных об одной сделке
         """
-        pass
+        return json.dumps(self.data)
 
 class QSHParser:
     """
@@ -379,8 +403,7 @@ class QSHParser:
         self._file_header = namedtuple('FileHeader',\
             ['signature', 'format_version', 'app_name', 'user_comment',\
             'time_record', 'stream_count', 'head_len'])
-        self._streams_structs = []
-        self._frames = []
+        self._streams = []
 
     def _read_file_header(self):
         """
@@ -767,6 +790,19 @@ def _run_unittests():
         def test_c_data_struct(self):
             """
             test data struct
+            """
+            grow_dt = GrowingDateTime(self.base_time)
+            grow_dt.read(self.trades_data)
+            self.trade.read(self.trades_data)
+            self.assertDictEqual(self.trade.data, 
+                {"trade_type": "BID", "exchange_date_time": "2015-03-02T09:59:59",\
+                "exchange_trade_number": None, "bid_number": None,\
+                "transaction_price": 15250, "transaction_volume": 10,\
+                "open_interest": None})
+
+        def test_d_read_file_header(self):
+            """
+            test file header reading
             """
             pass
 
