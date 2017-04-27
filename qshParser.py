@@ -198,7 +198,8 @@ class Growing(BaseTypes):
             разность между текущим и предыдущим значением, если предыдущее поле
             содержит число 268435455; в ином случае данное поле отсутствует
         """
-        super(Growing, self).__init__()
+#        super(Growing, self).__init__()
+        super().__init__()
         self._last = 0
 
     def read(self, stream):
@@ -247,7 +248,24 @@ class GrowingDateTime:
         else:
             return self._start + delta
 
-class Stock:
+class AbsStruct:
+    """
+    abstruct
+    """
+    def __init__(self):
+        """
+        init
+        """
+        self._base = BaseTypes()
+
+    def set_attr(self, attr_list, sub_attr_list):
+        """
+        set attr
+        """
+        for key in attr_list:
+            setattr(self, key, namedtuple(key, sub_attr_list))
+
+class Stock(AbsStruct):
     """
     Stock data
     """
@@ -255,6 +273,7 @@ class Stock:
         """
         set quotes count
         """
+        super().__init__()
         self.quotes_count = BaseTypes().read_sleb(stream)
         self._quote = namedtuple('Quote', ['rate','volume'])
         self.quotes = None
@@ -268,7 +287,7 @@ class Stock:
     def update_quotes(self, stream):
         pass
 
-class Trades:
+class Trades(AbsStruct):
     """
     Trades stream
     """
@@ -276,11 +295,11 @@ class Trades:
         """
         create data struct
         """
-        for key in ['_trade_type', '_exchange_date_time', '_exchange_trade_number',\
-            '_bid_number', '_transaction_price', '_transaction_volume', '_open_interest']:
-                setattr(self, key, namedtuple(key, ['value', 'data_type', 'bit_mask']))
+        super().__init__()
+        self.set_attr(['_trade_type', '_exchange_date_time', '_exchange_trade_number',\
+            '_bid_number', '_transaction_price', '_transaction_volume', '_open_interest'],
+            ['value', 'data_type', 'bit_mask'])
 
-        self._mask = BaseTypes()
         self._trade_type.bit_mask = 3
         self._trade_type.value = None
 
@@ -300,7 +319,7 @@ class Trades:
         self._transaction_price.bit_mask = 32 
         self._transaction_price.value = None
 
-        self._transaction_volume.data_type = BaseTypes()
+        self._transaction_volume.data_type = self._base
         self._transaction_volume.bit_mask = 64
         self._transaction_volume.value = None
 
@@ -313,7 +332,7 @@ class Trades:
         """
         stream
         """
-        mask = self._mask.read_byte(stream)
+        mask = self._base.read_byte(stream)
 
         self._set_trade_direction(mask, stream)
 
@@ -376,6 +395,51 @@ class Trades:
         Вывод данных об одной сделке
         """
         return json.dumps(self.data)
+
+
+class Header(AbsStruct):
+    """
+    file header data type
+    """
+    _attrs = ['_signature', '_format_version', '_app_name','_user_comment',\
+            '_record_start_time', '_stream_count', '_head_len']
+    _sub_attrs = ['value', 'read']
+
+    def __init__(self):
+        """
+        init
+        """
+        super().__init__()
+        self.set_attr(self._attrs, self._sub_attrs)
+
+        for attr in self._attrs:
+            getattr(self, attr).value = None
+
+        self._signature.read = self._base.read_byte
+        self._format_version.read = self._base.read_one_byte
+        self._app_name.read = self._base.read_string
+        self._record_start_time.read = self._base.read_datetime
+        self._stream_count.read = sefl._base.read_byte
+
+    def read(self, stream):
+        """
+        read header
+        """
+        for i in range(19):
+            if self._signature is None:
+                self._signature = ''
+            self._signature.value = self._signature.value +\
+                self.signature.read(stream).decode()
+        for key in  ['_format_version', '_app_name', '_user_comment',
+            '_record_start_time', '_stream_count']:
+            getattr(self, key).value = getattr(self, key).read(stream)
+
+        self._head_len = stream.tell()
+
+class Stream(AbsStruct):
+    def __init__(self):
+        super().__init__()
+        self._base = BaseTypes()
 
 class QSHParser:
     """
