@@ -416,25 +416,37 @@ class Header(AbsStruct):
             getattr(self, attr).value = None
 
         self._signature.read = self._base.read_byte
-        self._format_version.read = self._base.read_one_byte
+        self._format_version.read = self._base.read_byte
         self._app_name.read = self._base.read_string
         self._record_start_time.read = self._base.read_datetime
-        self._stream_count.read = sefl._base.read_byte
+        self._stream_count.read = self._base.read_byte
 
     def read(self, stream):
         """
         read header
         """
         for i in range(19):
-            if self._signature is None:
-                self._signature = ''
-            self._signature.value = self._signature.value +\
-                self.signature.read(stream).decode()
+            if self._signature.value is None:
+                self._signature.value = ''
+            _tmp = self._signature.read(stream)
+            self._signature.value = self._signature.value + chr(_tmp)
+#            self._signature.value = self._signature.value +\
+#                self._signature.read(stream).decode()
+
         for key in  ['_format_version', '_app_name', '_user_comment',
             '_record_start_time', '_stream_count']:
             getattr(self, key).value = getattr(self, key).read(stream)
 
         self._head_len = stream.tell()
+
+    def __repr__(self):
+        """
+        instance print format
+        """
+        s = ''
+        for attr in self._attrs:
+            s = s + '\t' + attr.strip('_') + ' :: ' + getattr(self, attr).value + '\n'
+        print(s)
 
 class Stream(AbsStruct):
     def __init__(self):
@@ -817,6 +829,8 @@ def _run_unittests():
 
             self.trades_data = BytesIO(\
                 b'\xad@f\xff\xff\xff\x7f\x98\xca\xe9\xe0\xee\xb9\x0e\x92\xf7\x00\n')
+            self.header_data = BytesIO(\
+                b'QScalp History Data\x04\x0eQshWriter.5488\x14ITinvest QSH Service\x00wb\x9c\xcd"\xd2\x08\x01')
 
             self.base = BaseTypes()
             self.relative = RelativeType()
@@ -824,6 +838,7 @@ def _run_unittests():
             self.base_time = datetime.now()
             self.growing_datetime = GrowingDateTime(self.base_time)
             self.trade = Trades()
+            self.header = Header()
 
         def test_a_simple(self):
             """
@@ -864,11 +879,12 @@ def _run_unittests():
                 "transaction_price": 15250, "transaction_volume": 10,\
                 "open_interest": None})
 
-        def test_d_read_file_header(self):
+        def test_d_file_header(self):
             """
             test file header reading
             """
-            pass
+            self.header.read(self.header_data)
+            print(self.header)
 
     suite = unittest.TestSuite()
     suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestTypeClassess))
