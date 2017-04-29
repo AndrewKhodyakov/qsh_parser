@@ -418,6 +418,7 @@ class Header(AbsStruct):
         self._signature.read = self._base.read_byte
         self._format_version.read = self._base.read_byte
         self._app_name.read = self._base.read_string
+        self._user_comment.read = self._base.read_string
         self._record_start_time.read = self._base.read_datetime
         self._stream_count.read = self._base.read_byte
 
@@ -430,8 +431,6 @@ class Header(AbsStruct):
                 self._signature.value = ''
             _tmp = self._signature.read(stream)
             self._signature.value = self._signature.value + chr(_tmp)
-#            self._signature.value = self._signature.value +\
-#                self._signature.read(stream).decode()
 
         for key in  ['_format_version', '_app_name', '_user_comment',
             '_record_start_time', '_stream_count']:
@@ -439,14 +438,35 @@ class Header(AbsStruct):
 
         self._head_len = stream.tell()
 
+    @property
+    def data(self):
+        """
+        get dict
+        """
+        out = {}
+        for attr in self._attrs:
+            if attr == '_head_len':
+                _tmp = getattr(self, attr)
+            else:
+                _tmp = getattr(self, attr).value
+            out[attr.strip('_')] = _tmp
+
+        return out
+
     def __repr__(self):
         """
         instance print format
         """
-        s = ''
+        out = ''
         for attr in self._attrs:
-            s = s + '\t' + attr.strip('_') + ' :: ' + getattr(self, attr).value + '\n'
-        print(s)
+            if attr == '_head_len':
+                rest = str(getattr(self, attr)) + '\n'
+            else:
+                rest = str(getattr(self, attr).value) + '\n'
+
+            out = out + '\t' + attr.strip('_') + ' :: ' + rest
+
+        return out
 
 class Stream(AbsStruct):
     def __init__(self):
@@ -884,7 +904,21 @@ def _run_unittests():
             test file header reading
             """
             self.header.read(self.header_data)
-            print(self.header)
+            self.assertTrue(self.header._signature.value == 'QScalp History Data')
+            self.assertTrue(self.header._format_version.value == 4)
+            self.assertTrue(self.header._app_name.value == 'QshWriter.5488')
+            self.assertTrue(self.header._user_comment.value == 'ITinvest QSH Service')
+            self.assertTrue(self.header._record_start_time.value ==\
+                datetime(year=2015, month=3, day=2, hour=6, minute=59, second=50))
+            self.assertTrue(self.header._stream_count.value == 1)
+            self.assertTrue(self.header._head_len == 65)
+            print(self.header.data)
+
+        def test_e_stream_header(self):
+            """
+            test stream header
+            """
+            pass
 
     suite = unittest.TestSuite()
     suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestTypeClassess))
