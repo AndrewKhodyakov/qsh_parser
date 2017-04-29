@@ -19,12 +19,16 @@ class General(Exception):
         print(self.msg)
 
 class FileNotExists(General):
-    def __init__(self,msg):
+    def __init__(self, msg):
         General.__init__(self, msg)
 
 class FileSignatureError(General):
-    def __init__(self,msg):
+    def __init__(self, msg):
         General.__init__(self, msg)
+
+class TouchMethodNoCall(General):
+    def __init__(self, msg):
+        super().__init__(msg)
 
 class BaseTypes:
     """
@@ -79,7 +83,7 @@ class BaseTypes:
         except Exception as e:
             msg = \
             'Got exception - {0}, details:\n\t- cursor position {1}\n;\t- file {2}'.\
-            format(e, stream.tell())
+            format(e, stream.tell(), stream.name)
             raise Exception(msg)
 
         return out
@@ -456,7 +460,7 @@ class Header(AbsStruct):
         """
         instance print format
         """
-        out = '\tFile header {0}:\n'
+        out = '\tHeader:\n'
         for attr in self._attrs:
             if attr == '_head_len':
                 rest = str(getattr(self, attr)) + '\n'
@@ -592,17 +596,54 @@ class QSHParser:
             msg = u'Путь к файлу {0} не найден'.format(path_to_file)
             raise FileNotExists(msg)
 
-        self._stream = open(path_to_file, 'rb')
+        self._io_stream = open(path_to_file, 'rb')
         self._header = Header()
         self._stream = Stream()
+        self._stream_dt = None
+        self._pyload = None
 
     def touch(self):
         """
         Read header and stream
         """
-        self._header.read(self._stream)
+        self._header.read(self._io_stream)
+        if self._header.data.get('stream_count') > 1:
+            _msg = 'More than one stream in file {}'.format(self._stream.name)
+            raise FileSignatureError(_msg)
 
+        self._stream_dt = GrowingDateTime(self._header.data.get('_record_start_time'))
+        self._stream.read(self._io_stream)
 
+        if self._stream.data.get('type') == 'Stock':
+            self._pyload = Stock()
+
+        elif self._stream.data.get('type') == 'Deals':
+            self._pyload = Trades()
+
+    def read(self):
+        """
+        Read one frame data
+        """
+        if self._stream_dt is None:
+            _msg = 'Call touch method at first'
+            raise TouchMethodNoCall(_msg)
+
+        _frame = Frame(self._stream_dt)
+        _frame.read(self._io_stream)
+        self._pyload.read(self._io_stream)
+        return self._pyload.data
+
+    def __repr__(self):
+        """
+        print format
+        """
+        if self._stream_dt is None:
+            _rest = '\n\tNo inforamtion, call touch method.'
+        else:
+            _rest = '\n' + str(self._header) + '\n' + str(self._stream)
+        return  'File: {}, cursor position: {}'.\
+            format(self._io_stream.name, self._io_stream.tell()) + _rest
+        
 
 class DataStructReadingMethods(object):
     """
