@@ -198,7 +198,6 @@ class Growing(BaseTypes):
             разность между текущим и предыдущим значением, если предыдущее поле
             содержит число 268435455; в ином случае данное поле отсутствует
         """
-#        super(Growing, self).__init__()
         super().__init__()
         self._last = 0
 
@@ -457,21 +456,70 @@ class Header(AbsStruct):
         """
         instance print format
         """
-        out = ''
+        out = '\tFile header {0}:\n'
         for attr in self._attrs:
             if attr == '_head_len':
                 rest = str(getattr(self, attr)) + '\n'
             else:
                 rest = str(getattr(self, attr).value) + '\n'
 
-            out = out + '\t' + attr.strip('_') + ' :: ' + rest
+            out = out + '\t'*2 + attr.strip('_') + ' :: ' + rest
 
         return out
 
 class Stream(AbsStruct):
+    """
+    read stream
+    """
+    _attrs = ['_type', '_tool']
+    _sub_attrs = ['value', 'read']
+
     def __init__(self):
+        """
+        init
+        """
         super().__init__()
-        self._base = BaseTypes()
+        self.set_attr(self._attrs, self._sub_attrs)
+        for attr in self._attrs:
+            getattr(self, attr).value = None
+
+        self._type.read = self._base.read_byte
+        self._tool.read = self._base.read_string
+
+    def read(self, stream):
+        """
+        read
+        """
+        _tmp = self._type.read(stream)
+        if _tmp not in [16, 32]:
+            _msg = 'Unsupported stream type - {}'.format(_tmp)
+            raise FileSignatureError(_msg)
+        if _tmp == 16:
+            self._type.value = 'Stock'
+        elif _tmp == 32:
+            self._type.value = 'Deals'
+
+        self._tool.value = self._tool.read(stream)
+
+    @property
+    def data(self):
+        """
+        get dict
+        """
+        out = {}
+        for attr in self._attrs:
+             out[attr.strip('_')] = getattr(self, attr).value
+        return out
+
+    def __repr__(self):
+        """
+        instance print format
+        """
+        out = '\tStream:\n'
+        for attr in self._attrs:
+            out = out + '\t'*2 + attr.strip('_') + ' :: ' + \
+                getattr(self, attr).value + '\n'
+        return out
 
 class QSHParser:
     """
@@ -851,6 +899,7 @@ def _run_unittests():
                 b'\xad@f\xff\xff\xff\x7f\x98\xca\xe9\xe0\xee\xb9\x0e\x92\xf7\x00\n')
             self.header_data = BytesIO(\
                 b'QScalp History Data\x04\x0eQshWriter.5488\x14ITinvest QSH Service\x00wb\x9c\xcd"\xd2\x08\x01')
+            self.stream_data = BytesIO(b' \x14SmartCOM:GAZP:::0.01')
 
             self.base = BaseTypes()
             self.relative = RelativeType()
@@ -859,6 +908,7 @@ def _run_unittests():
             self.growing_datetime = GrowingDateTime(self.base_time)
             self.trade = Trades()
             self.header = Header()
+            self.stream = Stream()
 
         def test_a_simple(self):
             """
@@ -912,13 +962,14 @@ def _run_unittests():
                 datetime(year=2015, month=3, day=2, hour=6, minute=59, second=50))
             self.assertTrue(self.header._stream_count.value == 1)
             self.assertTrue(self.header._head_len == 65)
-            print(self.header.data)
 
         def test_e_stream_header(self):
             """
             test stream header
             """
-            pass
+            self.stream.read(self.stream_data)
+            self.assertTrue(self.stream._type.value == 'Deals')
+            self.assertTrue(self.stream._tool.value == 'SmartCOM:GAZP:::0.01')
 
     suite = unittest.TestSuite()
     suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestTypeClassess))
