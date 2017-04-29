@@ -486,6 +486,7 @@ class Stream(AbsStruct):
         self._type.read = self._base.read_byte
         self._tool.read = self._base.read_string
 
+
     def read(self, stream):
         """
         read
@@ -521,6 +522,54 @@ class Stream(AbsStruct):
                 getattr(self, attr).value + '\n'
         return out
 
+class Frame(AbsStruct):
+    """
+    frame
+    """
+    _attrs = ['_grow_dt', '_stream']
+    _sub_attrs = ['value', 'read']
+
+    def __init__(self, growing_dt):
+        """
+        init
+        """
+        super().__init__()
+        self.set_attr(self._attrs, self._sub_attrs)
+        
+        for attr in self._attrs:
+            getattr(self, attr).value = None
+
+        self._grow_dt.read = growing_dt.read
+        self._stream.read = self._base.read_byte
+
+    def read(self, stream, one_stream=True):
+        """
+        read
+        """
+        self._grow_dt.value = self._grow_dt.read(stream)
+        if not one_stream:
+            self._sub_attrs.value = self._sub_attrs.read(stream)
+
+    @property
+    def data(self):
+        """
+        get data
+        """
+        return {attr.strip('_'):getattr(self, attr).value for attr in self._attrs}
+
+    def __repr__(self):
+        """
+        pratty print
+        """
+        _tmp = {}
+        for attr in self.data:
+            if '_grow_dt' in attr:
+                _tmp[attr.strip('_')] = getattr(self, attr).value.isoformat()
+            else:
+                _tmp[attr.strip('_')] = getattr(self, attr).value
+
+        return json.dumps(_tmp)
+
 class QSHParser:
     """
         Парсер:
@@ -544,21 +593,15 @@ class QSHParser:
             raise FileNotExists(msg)
 
         self._stream = open(path_to_file, 'rb')
-        self._file_header = namedtuple('FileHeader',\
-            ['signature', 'format_version', 'app_name', 'user_comment',\
-            'time_record', 'stream_count', 'head_len'])
-        self._streams = []
+        self._header = Header()
+        self._stream = Stream()
 
-    def _read_file_header(self):
+    def touch(self):
         """
-        Выходит так - после чтения заголовка файла - становиться понятно, что
-        это за файл и какие в нем данные - создаются соотвествующие структуы  в памяти.
-        Далее мы пошагово делая next получаем данные из файла
+        Read header and stream
         """
-        pass
+        self._header.read(self._stream)
 
-    def _add_new_stream_struct(self):
-        pass
 
 
 class DataStructReadingMethods(object):
@@ -900,6 +943,7 @@ def _run_unittests():
             self.header_data = BytesIO(\
                 b'QScalp History Data\x04\x0eQshWriter.5488\x14ITinvest QSH Service\x00wb\x9c\xcd"\xd2\x08\x01')
             self.stream_data = BytesIO(b' \x14SmartCOM:GAZP:::0.01')
+            self.frame_data = BytesIO(b'\xad@')
 
             self.base = BaseTypes()
             self.relative = RelativeType()
@@ -970,6 +1014,15 @@ def _run_unittests():
             self.stream.read(self.stream_data)
             self.assertTrue(self.stream._type.value == 'Deals')
             self.assertTrue(self.stream._tool.value == 'SmartCOM:GAZP:::0.01')
+
+        def test_f_stream_header(self):
+            """
+            test frame
+            """
+            frame = Frame(self.growing_datetime)
+            frame.read(self.frame_data)
+            _tmp = frame.data.get('grow_dt') - self.base_time
+            self.assertTrue(str(_tmp) in '0:00:08.237000')
 
     suite = unittest.TestSuite()
     suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestTypeClassess))
