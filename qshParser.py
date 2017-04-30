@@ -208,14 +208,14 @@ class Growing(BaseTypes):
     def read(self, stream):
         """
         """
-        out = None
-        tmp = self.read_uleb(stream)
-        if tmp >= 268435454:
-            tmp = self.read_sleb(stream)
+        _tmp = self.read_uleb(stream)
+        if _tmp >= 268435454:
+            _tmp = self.read_sleb(stream)
 
-        out  = tmp - self._last
-        self._last = out
-        return out
+        print('g', 'n:', _tmp, ' l:', self._last)
+
+        self._last  = self._last + _tmp
+        return self._last
 
 class GrowingDateTime:
     """
@@ -245,7 +245,7 @@ class GrowingDateTime:
             ссчитанного в заголовке файла.
         """
         _tmp = self._base.read(stream)
-        print(_tmp)
+        print('gt', _tmp)
 #        delta = timedelta(microseconds=(self._base.read(stream)*1000))
         delta = timedelta(microseconds=(_tmp*1000))
         print(delta)
