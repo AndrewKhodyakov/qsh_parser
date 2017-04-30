@@ -152,7 +152,8 @@ class Uleb128(BaseLEB128):
 
     uleb128 - https://en.wikipedia.org/wiki/LEB128
     """
-    pass
+    def __init__(self, base_byte_number):
+        super().__init__(base_byte_number)
 
 
 class Sleb128(BaseLEB128):
@@ -160,7 +161,8 @@ class Sleb128(BaseLEB128):
     Signed LEB128 encode/decode class
     sleb128 - https://en.wikipedia.org/wiki/LEB128
     """
-    pass
+    def __init__(self, base_byte_number):
+        super().__init__(base_byte_number)
 
 
 class TestUleb128EncodeDecode(unittest.TestCase):

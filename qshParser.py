@@ -244,7 +244,11 @@ class GrowingDateTime:
             Growing - это количество миллисекунд от стартового времени 
             ссчитанного в заголовке файла.
         """
-        delta = timedelta(microseconds=(self._base.read(stream)*1000))
+        _tmp = self._base.read(stream)
+        print(_tmp)
+#        delta = timedelta(microseconds=(self._base.read(stream)*1000))
+        delta = timedelta(microseconds=(_tmp*1000))
+        print(delta)
         if delta.days > 1:
             self._start = self._start + delta
             return self._start
