@@ -222,7 +222,6 @@ class Growing(BaseTypes):
         if _tmp >= 268435454:
             _tmp = self.read_sleb(stream)
 
-        print('last',self._last,'now',_tmp)
         self._last = self._last + _tmp
         return self._last
 
@@ -812,8 +811,8 @@ def _run_unittests():
 
             #growing
             self.growing.read(self.growing_uleb_one)
-            self.assertEqual(self.growing.read(self.growing_uleb_two), 0)
-            self.assertEqual(self.growing.read(self.growing_uleb_sleb), 1)
+            self.assertEqual(self.growing.read(self.growing_uleb_two), 1248970)
+            self.assertEqual(self.growing.read(self.growing_uleb_sleb), 1248971)
 
             #growing datetime
             self.assertEqual((self.growing_datetime.read(self.growing_datetime_data)\
