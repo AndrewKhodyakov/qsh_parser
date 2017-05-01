@@ -4,9 +4,9 @@
 """
     Парсер_файлов_qsh по спецификации версии 4
 """
-import os, sys
+import os
+import sys
 import json
-import itertools
 from  collections  import namedtuple
 import struct
 from datetime import datetime, timedelta, date
@@ -14,19 +14,31 @@ from leb_128 import Uleb128, Sleb128
 
 
 class General(Exception):
+    """
+    general exceprion
+    """
     def __init__(self, msg):
         self.msg = msg
-        print(self.msg)
+        super().__init__(msg)
 
 class FileNotExists(General):
+    """
+    file not exists
+    """
     def __init__(self, msg):
         General.__init__(self, msg)
 
 class FileSignatureError(General):
+    """
+    bad file signature
+    """
     def __init__(self, msg):
         General.__init__(self, msg)
 
 class TouchMethodNoCall(General):
+    """
+    touch method not call
+    """
     def __init__(self, msg):
         super().__init__(msg)
 
@@ -42,7 +54,7 @@ class BaseTypes:
             init  - setup data types and their params for decoding
         """
         for inst in self.data_types:
-            self.__dict__[inst] = namedtuple(inst,['cursor_step','unpack_code'])
+            self.__dict__[inst] = namedtuple(inst, ['cursor_step', 'unpack_code'])
 
         self._byte.cursor_step = 1
         self._byte.unpack_code = 'B'
@@ -73,17 +85,17 @@ class BaseTypes:
         out = None
         try:
             if getattr(self, attr).unpack_code:
-                out = struct.unpack(getattr(self, attr).unpack_code,
+                out = struct.unpack(getattr(self, attr).unpack_code,\
                 stream.read(getattr(self, attr).cursor_step))
                 if len(out) > 0:
                     out = out[0]
             else:
                 out = stream.read(getattr(self, attr).cursor_step)
 
-        except Exception as e:
+        except Exception as excpt:
             msg = \
             'Got exception - {0}, details:\n\t- cursor position {1}\n;\t- file {2}'.\
-            format(e, stream.tell(), stream.name)
+            format(excpt, stream.tell(), stream.name)
             raise Exception(msg)
 
         return out
@@ -135,7 +147,7 @@ class BaseTypes:
         out = None
         nano_seconds = self._read('_int64', stream)
         if nano_seconds:
-            out = (datetime(1, 1, 1) + timedelta(microseconds = nano_seconds/10))
+            out = (datetime(1, 1, 1) + timedelta(microseconds=nano_seconds/10))
         return out
 
 
@@ -155,7 +167,7 @@ class BaseTypes:
 
     def read_string(self, stream):
         """
-        Read utf8 encoded byte array 
+        Read utf8 encoded byte array
         Тип String является комплексным и состоит из следующих компонентов:
         - uleb128 - длинна массива - число бит для чтения
         """
@@ -180,12 +192,8 @@ class RelativeType(BaseTypes):
         показывающее разность между текущим значением и предыдущим.
         Первая разность берется относительно нуля.
         """
-        _out = None
-        _tmp = self.read_sleb(stream)
-        print('realtive', 'n:', _tmp, ' l:', self._last)
-        _out = _tmp - self._last
-        self._last = _tmp
-        return _out
+        self._last = self.read_sleb(stream) + self._last
+        return self._last
 
 class Growing(BaseTypes):
     """
@@ -208,12 +216,13 @@ class Growing(BaseTypes):
 
     def read(self, stream):
         """
+        read method
         """
         _tmp = self.read_uleb(stream)
         if _tmp >= 268435454:
             _tmp = self.read_sleb(stream)
 
-        self._last  = self._last + _tmp
+        self._last = self._last + _tmp
         return self._last
 
 class GrowingDateTime:
@@ -228,7 +237,7 @@ class GrowingDateTime:
         деленому на константу TimeSpan.TicksPerMillisecond.
         Сохраняется в поле типа Growing.
 
-        start_time: начало отсчета 
+        start_time: начало отсчета
         """
         if start_time:
             self._start = start_time
@@ -240,7 +249,7 @@ class GrowingDateTime:
     def read(self, stream):
         """
         После долгих экспериментов остановился на следующей схеме:
-            Growing - это количество миллисекунд от стартового времени 
+            Growing - это количество миллисекунд от стартового времени
             ссчитанного в заголовке файла.
         """
         delta = timedelta(microseconds=(self._base.read(stream)*1000))
@@ -272,13 +281,13 @@ class Stock(AbsStruct):
     """
     Stock data
     """
-    def __init__(stream):
+    def __init__(self, stream):
         """
         set quotes count
         """
         super().__init__()
         self.quotes_count = BaseTypes().read_sleb(stream)
-        self._quote = namedtuple('Quote', ['rate','volume'])
+        self._quote = namedtuple('Quote', ['rate', 'volume'])
         self.quotes = None
 
     def set_quotes(self, stream):
@@ -288,6 +297,9 @@ class Stock(AbsStruct):
         pass
 
     def update_quotes(self, stream):
+        """
+        update
+        """
         pass
 
 class Trades(AbsStruct):
@@ -300,7 +312,7 @@ class Trades(AbsStruct):
         """
         super().__init__()
         self.set_attr(['_trade_type', '_exchange_date_time', '_exchange_trade_number',\
-            '_bid_number', '_transaction_price', '_transaction_volume', '_open_interest'],
+            '_bid_number', '_transaction_price', '_transaction_volume', '_open_interest'],\
             ['value', 'data_type', 'bit_mask'])
 
         self._trade_type.bit_mask = 3
@@ -319,7 +331,7 @@ class Trades(AbsStruct):
         self._bid_number.value = None
 
         self._transaction_price.data_type = RelativeType()
-        self._transaction_price.bit_mask = 32 
+        self._transaction_price.bit_mask = 32
         self._transaction_price.value = None
 
         self._transaction_volume.data_type = self._base
@@ -352,7 +364,7 @@ class Trades(AbsStruct):
             elif (mask & attr.bit_mask) == 0:
                 pass
 
-            else: 
+            else:
                 msg = 'Can`t read {} in file {} - position {}'.format(\
                     key, stream.name, stream.tell())
                 raise TypeError(msg)
@@ -404,7 +416,7 @@ class Header(AbsStruct):
     """
     file header data type
     """
-    _attrs = ['_signature', '_format_version', '_app_name','_user_comment',\
+    _attrs = ['_signature', '_format_version', '_app_name', '_user_comment',\
             '_record_start_time', '_stream_count', '_head_len']
     _sub_attrs = ['value', 'read']
 
@@ -424,6 +436,7 @@ class Header(AbsStruct):
         self._user_comment.read = self._base.read_string
         self._record_start_time.read = self._base.read_datetime
         self._stream_count.read = self._base.read_byte
+        self._head_len = None
 
     def read(self, stream):
         """
@@ -435,7 +448,7 @@ class Header(AbsStruct):
             _tmp = self._signature.read(stream)
             self._signature.value = self._signature.value + chr(_tmp)
 
-        for key in  ['_format_version', '_app_name', '_user_comment',
+        for key in  ['_format_version', '_app_name', '_user_comment',\
             '_record_start_time', '_stream_count']:
             getattr(self, key).value = getattr(self, key).read(stream)
 
@@ -513,7 +526,7 @@ class Stream(AbsStruct):
         """
         out = {}
         for attr in self._attrs:
-             out[attr.strip('_')] = getattr(self, attr).value
+            out[attr.strip('_')] = getattr(self, attr).value
         return out
 
     def __repr__(self):
@@ -539,7 +552,7 @@ class Frame(AbsStruct):
         """
         super().__init__()
         self.set_attr(self._attrs, self._sub_attrs)
-        
+
         for attr in self._attrs:
             getattr(self, attr).value = None
 
@@ -580,11 +593,11 @@ class QSHParser:
         Структура файла:
         Заголовок файла
             - заголовок потока 1,
-            .......... 
+            ..........
             - заголовок потока n(при наличии),
                 - заголовок кадра 1,
                 - данные кадра 1,
-                .......... 
+                ..........
                 - заголовок кадра n,
                 - данные кадра n,
     """
@@ -601,24 +614,31 @@ class QSHParser:
         self._stream = Stream()
         self._stream_dt = None
         self._pyload = None
+        self._version = [4]
 
     def touch(self):
         """
         Read header and stream
         """
-        self._header.read(self._io_stream)
-        if self._header.data.get('stream_count') > 1:
-            _msg = 'More than one stream in file {}'.format(self._stream.name)
-            raise FileSignatureError(_msg)
+        if self._stream_dt is None:
+            self._header.read(self._io_stream)
+            if self._header.data.get('stream_count') > 1:
+                _msg = 'More than one stream in file {}'.format(self._stream.name)
+                raise FileSignatureError(_msg)
 
-        self._stream_dt = GrowingDateTime(self._header.data.get('_record_start_time'))
-        self._stream.read(self._io_stream)
+            self._stream_dt = GrowingDateTime(self._header.data.get('_record_start_time'))
+            self._stream.read(self._io_stream)
 
-        if self._stream.data.get('type') == 'Stock':
-            self._pyload = Stock()
+            if self._stream.data.get('type') == 'Stock':
+                self._pyload = Stock()
 
-        elif self._stream.data.get('type') == 'Deals':
-            self._pyload = Trades()
+            elif self._stream.data.get('type') == 'Deals':
+                self._pyload = Trades()
+
+        _tmp = self._header.data.get('format_version')
+        if _tmp not in self._version:
+            raise Warning('{} are not support version {}'.\
+                format(self.__class__.__name__, _tmp))
 
     def read(self):
         """
@@ -643,17 +663,15 @@ class QSHParser:
             _rest = '\n' + str(self._header) + '\n' + str(self._stream)
         return  'File: {}, cursor position: {}'.\
             format(self._io_stream.name, self._io_stream.tell()) + _rest
-        
+
 
 def _read_mode(path_to_file):
     """
     read from file
     path_to_file: full path to file
     """
-    qsh = QshParser(path_to_file)
-    qsh.read_file_metadata()
-    qsh.print_file_metadata()
-    qsh.print_strems_headers()
+    qsh = QSHParser(path_to_file)
+    qsh.touch()
 
 
 def _run_unittests():
@@ -704,7 +722,8 @@ def _run_unittests():
             """
             self.assertEqual(self.base.read_byte(self.one_byte), 4)
             self.assertEqual(self.base.read_string(self.string), 'QshWriter.5488')
-            self.assertEqual(self.base.read_datetime(self.date_time).date(),date(year=2015, month=3, day=2))
+            self.assertEqual(self.base.read_datetime(self.date_time).date(),\
+                date(year=2015, month=3, day=2))
 
         def test_b_complex(self):
             """
@@ -731,7 +750,7 @@ def _run_unittests():
             grow_dt = GrowingDateTime(self.base_time)
             grow_dt.read(self.trades_data)
             self.trade.read(self.trades_data)
-            self.assertDictEqual(self.trade.data, 
+            self.assertDictEqual(self.trade.data,\
                 {"trade_type": "BID", "exchange_date_time": "2015-03-02T09:59:59",\
                 "exchange_trade_number": None, "bid_number": None,\
                 "transaction_price": 15250, "transaction_volume": 10,\
