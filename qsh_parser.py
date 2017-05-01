@@ -813,7 +813,6 @@ def _run_unittests():
             #growing
             self.growing.read(self.growing_uleb_one)
             self.assertEqual(self.growing.read(self.growing_uleb_two), 0)
-
             self.assertEqual(self.growing.read(self.growing_uleb_sleb), 1)
 
             #growing datetime
