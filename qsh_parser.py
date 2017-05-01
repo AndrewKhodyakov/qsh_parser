@@ -277,30 +277,90 @@ class AbsStruct:
         for key in attr_list:
             setattr(self, key, namedtuple(key, sub_attr_list))
 
+
 class Stock(AbsStruct):
     """
-    Stock data
+    One stock data
     """
-    def __init__(self, stream):
+    def __init__(self):
         """
-        set quotes count
+        set quote struct
         """
         super().__init__()
-        self.quotes_count = BaseTypes().read_sleb(stream)
-        self._quote = namedtuple('Quote', ['rate', 'volume'])
-        self.quotes = None
+        self.set_attr(['_rate', '_volume'], ['value', 'data_type'])
 
-    def set_quotes(self, stream):
-        """
-        set quotes values
-        """
-        pass
+        self._rate.data_type = RelativeType()
+        self._volume.data_type = self._base
 
-    def update_quotes(self, stream):
+    def read(self, stream):
         """
-        update
+        read
         """
-        pass
+        for attr in self._attrs:
+            if attr == '_volume':
+                getattr(self, attr).value =\
+                     getattr(self, attr).data_type.read_sleb(stream)
+            else:
+                getattr(self, attr).value = getattr(self, attr).data_type.read(stream)
+
+    @property
+    def data(self):
+        """
+        Convert all data to dict
+        """
+        return {attr.strip('_'):getattr(self, attr).value for attr in self._attrs}
+
+    def __repr__(self):
+        """
+        reprint
+        """
+        return json.dumps(self.data)
+
+
+class Stocks(AbsStruct):
+    """
+    one frame sotcks set
+    """
+    def __init__(self):
+        """
+        set quotes set struct
+        """
+        super().__init__()
+        self.set_attr(['_number', '_quote', '_timestump'], ['value', 'date_type'])
+
+        self._number.data_type = self._base
+        self._number.value = None
+        self._quote.data_type = Stock()
+        self._quote.value = []
+
+    def read(self, stream, time_stump):
+        """
+        time_stump
+        """
+        self._timestump.value = time_stump
+        self._number.value = self._number.data_type.read_sleb(stream)
+        for quote in range(self._number.value):
+            self._quote.data_type.read(stream)
+            self._quote.value.append(self._quote.data)
+
+    @property
+    def data(self):
+        """
+        Convert all data to list
+        """
+        return [quote.update({'timestump':self._timestump})\
+             for quote in self._quote.value]
+
+    def __repr__(self):
+        """
+        reprint
+        """
+        out = self.data
+        for inst in out:
+            inst['timestamp'] = inst.get('timestamp').isoformat()
+            
+        return json.dumps(out)
+
 
 class Trades(AbsStruct):
     """
@@ -587,7 +647,7 @@ class Frame(AbsStruct):
 
         return json.dumps(_tmp)
 
-class QSHParser:
+
     """
         Парсер:
         Структура файла:
@@ -650,7 +710,13 @@ class QSHParser:
 
         _frame = Frame(self._stream_dt)
         _frame.read(self._io_stream)
-        self._pyload.read(self._io_stream)
+
+        if self._pyload.__class__.__name__ == 'Stock':
+            self._pyload.read(stream=self._io_stream,\
+                timestamp=_frame.data.get('grow_dt'))
+        else:
+            self._pyload.read(self._io_stream)
+
         return self._pyload.data
 
     def __repr__(self):
