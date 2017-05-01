@@ -180,11 +180,12 @@ class RelativeType(BaseTypes):
         показывающее разность между текущим значением и предыдущим.
         Первая разность берется относительно нуля.
         """
-        out = None
-        tmp = self.read_sleb(stream)
-        out = tmp - self._last
-        self._last = tmp
-        return out
+        _out = None
+        _tmp = self.read_sleb(stream)
+        print('realtive', 'n:', _tmp, ' l:', self._last)
+        _out = _tmp - self._last
+        self._last = _tmp
+        return _out
 
 class Growing(BaseTypes):
     """
@@ -211,8 +212,6 @@ class Growing(BaseTypes):
         _tmp = self.read_uleb(stream)
         if _tmp >= 268435454:
             _tmp = self.read_sleb(stream)
-
-        print('g', 'n:', _tmp, ' l:', self._last)
 
         self._last  = self._last + _tmp
         return self._last
@@ -244,16 +243,13 @@ class GrowingDateTime:
             Growing - это количество миллисекунд от стартового времени 
             ссчитанного в заголовке файла.
         """
-        _tmp = self._base.read(stream)
-        print('gt', _tmp)
-#        delta = timedelta(microseconds=(self._base.read(stream)*1000))
-        delta = timedelta(microseconds=(_tmp*1000))
-        print(delta)
+        delta = timedelta(microseconds=(self._base.read(stream)*1000))
         if delta.days > 1:
-            self._start = self._start + delta
-            return self._start
+            self._start = datetime(1, 1, 1) + delta
         else:
-            return self._start + delta
+            self._start = self._start + delta
+
+        return self._start
 
 class AbsStruct:
     """
