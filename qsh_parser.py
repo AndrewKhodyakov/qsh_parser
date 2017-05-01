@@ -222,6 +222,7 @@ class Growing(BaseTypes):
         if _tmp >= 268435454:
             _tmp = self.read_sleb(stream)
 
+        print('last',self._last,'now',_tmp)
         self._last = self._last + _tmp
         return self._last
 
@@ -282,12 +283,15 @@ class Stock(AbsStruct):
     """
     One stock data
     """
+    _attrs = ['_rate', '_volume']
+    _sub_attrs = ['value', 'data_type']
+
     def __init__(self):
         """
         set quote struct
         """
         super().__init__()
-        self.set_attr(['_rate', '_volume'], ['value', 'data_type'])
+        self.set_attr(self._attrs, self._sub_attrs)
 
         self._rate.data_type = RelativeType()
         self._volume.data_type = self._base
@@ -321,12 +325,15 @@ class Stocks(AbsStruct):
     """
     one frame sotcks set
     """
+    _attrs = ['_number', '_quote', '_timestump']
+    _sub_attrs = ['value', 'date_type']
+
     def __init__(self):
         """
         set quotes set struct
         """
         super().__init__()
-        self.set_attr(['_number', '_quote', '_timestump'], ['value', 'date_type'])
+        self.set_attr(self._attrs, self._sub_attrs)
 
         self._number.data_type = self._base
         self._number.value = None
@@ -341,7 +348,7 @@ class Stocks(AbsStruct):
         self._number.value = self._number.data_type.read_sleb(stream)
         for quote in range(self._number.value):
             self._quote.data_type.read(stream)
-            self._quote.value.append(self._quote.data)
+            self._quote.value.append(self._quote.data_type.data)
 
     @property
     def data(self):
@@ -648,6 +655,7 @@ class Frame(AbsStruct):
         return json.dumps(_tmp)
 
 
+class QSHParser:
     """
         Парсер:
         Структура файла:
@@ -759,13 +767,16 @@ def _run_unittests():
             self.string = BytesIO(b'\x0eQshWriter.5488')
             self.date_time = BytesIO(b'\x00wb\x9c\xcd"\xd2\x08')
 
-            self.relative_data_one = BytesIO(b'\x9b\xf1Y')
+            self.relative_data_one = BytesIO(b'\xe5\x8e&')
             self.relative_data_two = BytesIO(b'\x9b\xf1Y')
+
             self.growing_uleb_one = BytesIO(b'\xe5\x8e&')
             self.growing_uleb_two = BytesIO(b'\xe5\x8e&')
+
             self.growing_uleb_sleb = BytesIO(b'\xfe\xff\xff\x7f\x01')
             self.growing_datetime_data = BytesIO(b'\xb9$')
 
+            self.stocks_data = BytesIO(b'1\xff\x82\x01\x01')
             self.trades_data = BytesIO(\
                 b'\xad@f\xff\xff\xff\x7f\x98\xca\xe9\xe0\xee\xb9\x0e\x92\xf7\x00\n')
             self.header_data = BytesIO(\
@@ -852,6 +863,14 @@ def _run_unittests():
             frame.read(self.frame_data)
             _tmp = frame.data.get('grow_dt') - self.base_time
             self.assertTrue(str(_tmp) in '0:00:08.237000')
+
+        def test_i_stream_header(self):
+            """
+            test stocks and stock
+            """
+            stocks = Stocks()
+            stocks.read(self.stocks_data, self.base_time)
+            print(stocks)
 
     suite = unittest.TestSuite()
     suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestTypeClassess))
