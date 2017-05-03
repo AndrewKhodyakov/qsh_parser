@@ -345,6 +345,10 @@ class Stocks(AbsStruct):
         """
         self._timestump.value = time_stump
         self._number.value = self._number.data_type.read_sleb(stream)
+
+        if len(self._quote.value) != 0:
+            self._quote.value = []
+
         for quote in range(self._number.value):
             self._quote.data_type.read(stream)
             self._quote.value.append(self._quote.data_type.data)
@@ -354,18 +358,13 @@ class Stocks(AbsStruct):
         """
         Convert all data to list
         """
-        return [quote.update({'timestump':self._timestump})\
-             for quote in self._quote.value]
+        return {'timestump':self._timestump.value, 'quotes':self._quote.value}
 
     def __repr__(self):
         """
         reprint
         """
-        out = self.data
-        for inst in out:
-            inst['timestamp'] = inst.get('timestamp').isoformat()
-            
-        return json.dumps(out)
+        return json.dumps(self.data)
 
 
 class Trades(AbsStruct):
@@ -776,6 +775,7 @@ def _run_unittests():
             self.growing_datetime_data = BytesIO(b'\xb9$')
 
             self.stocks_data = BytesIO(b'1\xff\x82\x01\x01')
+            self.stocks_data = BytesIO(b'\xb9$1\xff\x82\x01\x01\xa1~\x01A\x01\xee~\x03\xa4\x7f\x01U\x03\x94~\x01\xcc~\x02v\x02v\x02v\x02v\x02\x8b~\x03N\x02N\x03~\x14Z\x02c\x14\x7f\x01_\x14\xef~~N~N~N}P\xb8~l\x7f]\x7fu\x7f]\x7fg\x7f\x00\x7ftvPN`\x7f}\x7fo\x7fF\x7fR\x7fE}}\x98xO\x7fv\x7fa\x7f\\\x7f\xbd}\x9c\x7f{\x7f^\x7fuXN\x7f')
             self.trades_data = BytesIO(\
                 b'\xad@f\xff\xff\xff\x7f\x98\xca\xe9\xe0\xee\xb9\x0e\x92\xf7\x00\n')
             self.header_data = BytesIO(\
