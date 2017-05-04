@@ -26,14 +26,14 @@ class FileNotExists(General):
     file not exists
     """
     def __init__(self, msg):
-        General.__init__(self, msg)
+        super().__init__(msg)
 
 class FileSignatureError(General):
     """
     bad file signature
     """
     def __init__(self, msg):
-        General.__init__(self, msg)
+        super().__init__(msg)
 
 class TouchMethodNoCall(General):
     """
@@ -324,7 +324,7 @@ class Stocks(AbsStruct):
     """
     one frame sotcks set
     """
-    _attrs = ['_number', '_quote', '_timestump']
+    _attrs = ['_number', '_quote', '_timestamp']
     _sub_attrs = ['value', 'date_type']
 
     def __init__(self):
@@ -339,11 +339,11 @@ class Stocks(AbsStruct):
         self._quote.data_type = Stock()
         self._quote.value = []
 
-    def read(self, stream, time_stump):
+    def read(self, stream, timestamp):
         """
         time_stump
         """
-        self._timestump.value = time_stump
+        self._timestamp.value = timestamp.isoformat()
         self._number.value = self._number.data_type.read_sleb(stream)
 
         if len(self._quote.value) != 0:
@@ -358,7 +358,7 @@ class Stocks(AbsStruct):
         """
         Convert all data to list
         """
-        return {'timestump':self._timestump.value, 'quotes':self._quote.value}
+        return {'timestamp':self._timestamp.value, 'quotes':self._quote.value}
 
     def __repr__(self):
         """
@@ -692,11 +692,11 @@ class QSHParser:
                 _msg = 'More than one stream in file {}'.format(self._stream.name)
                 raise FileSignatureError(_msg)
 
-            self._stream_dt = GrowingDateTime(self._header.data.get('_record_start_time'))
+            self._stream_dt = GrowingDateTime(self._header.data.get('record_start_time'))
             self._stream.read(self._io_stream)
 
             if self._stream.data.get('type') == 'Stock':
-                self._pyload = Stock()
+                self._pyload = Stocks()
 
             elif self._stream.data.get('type') == 'Deals':
                 self._pyload = Trades()
@@ -717,10 +717,11 @@ class QSHParser:
         _frame = Frame(self._stream_dt)
         _frame.read(self._io_stream)
 
-        if self._pyload.__class__.__name__ == 'Stock':
+        if self._pyload.__class__.__name__ == 'Stocks':
             self._pyload.read(stream=self._io_stream,\
                 timestamp=_frame.data.get('grow_dt'))
-        else:
+
+        elif self._pyload.__class__.__name__ == 'Trades':
             self._pyload.read(self._io_stream)
 
         return self._pyload.data
@@ -774,8 +775,8 @@ def _run_unittests():
             self.growing_uleb_sleb = BytesIO(b'\xfe\xff\xff\x7f\x01')
             self.growing_datetime_data = BytesIO(b'\xb9$')
 
-            self.stocks_data = BytesIO(b'1\xff\x82\x01\x01')
-            self.stocks_data = BytesIO(b'\xb9$1\xff\x82\x01\x01\xa1~\x01A\x01\xee~\x03\xa4\x7f\x01U\x03\x94~\x01\xcc~\x02v\x02v\x02v\x02v\x02\x8b~\x03N\x02N\x03~\x14Z\x02c\x14\x7f\x01_\x14\xef~~N~N~N}P\xb8~l\x7f]\x7fu\x7f]\x7fg\x7f\x00\x7ftvPN`\x7f}\x7fo\x7fF\x7fR\x7fE}}\x98xO\x7fv\x7fa\x7f\\\x7f\xbd}\x9c\x7f{\x7f^\x7fuXN\x7f')
+            self.stocks_data =\
+BytesIO(b'1\xff\x82\x01\x01\xa1~\x01A\x01\xee~\x03\xa4\x7f\x01U\x03\x94~\x01\xcc~\x02v\x02v\x02v\x02v\x02\x8b~\x03N\x02N\x03~\x14Z\x02c\x14\x7f\x01_\x14\xef~~N~N~N}P\xb8~l\x7f]\x7fu\x7f]\x7fg\x7f\x00\x7ftvPN`\x7f}\x7fo\x7fF\x7fR\x7fE}}\x98xO\x7fv\x7fa\x7f\\\x7f\xbd}\x9c\x7f{\x7f^\x7fuXN\x7f')
             self.trades_data = BytesIO(\
                 b'\xad@f\xff\xff\xff\x7f\x98\xca\xe9\xe0\xee\xb9\x0e\x92\xf7\x00\n')
             self.header_data = BytesIO(\
@@ -868,7 +869,7 @@ def _run_unittests():
             """
             stocks = Stocks()
             stocks.read(self.stocks_data, self.base_time)
-            print(stocks)
+            self.assertTrue(len(stocks.data.get('quotes')) == stocks._number.value)
 
     suite = unittest.TestSuite()
     suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestTypeClassess))
