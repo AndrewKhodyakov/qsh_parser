@@ -10,8 +10,10 @@ import json
 from  collections  import namedtuple
 import struct
 from datetime import datetime, timedelta, date
+import pytz
 from leb_128 import Uleb128, Sleb128
 
+LOCAL_TZ = pytz.timezone('Europe/Moscow')
 
 class General(Exception):
     """
@@ -148,7 +150,7 @@ class BaseTypes:
         nano_seconds = self._read('_int64', stream)
         if nano_seconds:
             out = (datetime(1, 1, 1) + timedelta(microseconds=nano_seconds/10))
-        return out
+        return out.replace(tzinfo=pytz.utc).astimezone(LOCAL_TZ)
 
 
     def read_uleb(self, stream):
@@ -344,7 +346,7 @@ class Stocks(AbsStruct):
         """
         time_stump
         """
-        self._timestamp.value = timestamp.isoformat()
+        self._timestamp.value = timestamp
         self._number.value = self._number.data_type.read_sleb(stream)
 
         if len(self._quote.value) != 0:
@@ -365,7 +367,9 @@ class Stocks(AbsStruct):
         """
         reprint
         """
-        return json.dumps(self.data)
+        _tmp = self.data
+        _tmp['timestamp'] = _tmp.get('timestamp').isoformat()
+        return json.dumps(_tmp)
 
 
 class Trades(AbsStruct):
@@ -464,9 +468,6 @@ class Trades(AbsStruct):
         for key in ['_trade_type', '_exchange_date_time', '_exchange_trade_number',\
         '_bid_number', '_transaction_price', '_transaction_volume', '_open_interest']:
             tmp = getattr(self, key).value
-            if key == '_exchange_date_time':
-                tmp = tmp.isoformat()
-
             out[key.strip('_')] = tmp
 
         return out
@@ -475,7 +476,9 @@ class Trades(AbsStruct):
         """
         Вывод данных об одной сделке
         """
-        return json.dumps(self.data)
+        _tmp = self.data
+        _tmp['exchange_date_time'] = _tmp.get('exchange_date_time').isoformat()
+        return json.dumps(_tmp)
 
 
 class Header(AbsStruct):
@@ -727,6 +730,12 @@ class QSHParser:
 
         return self._pyload.data
 
+    def frame_to_json(self):
+        """
+        Convert pyload to json
+        """
+        return str(self._pyload)
+
     def __repr__(self):
         """
         print format
@@ -745,6 +754,7 @@ class QSHParser:
         while True:
             yield self.read()
 
+
 def _read_mode(path_to_file):
     """
     read from file
@@ -752,7 +762,10 @@ def _read_mode(path_to_file):
     """
     qsh = QSHParser(path_to_file)
     qsh.touch()
-
+    print(qsh)
+    print('\n' + '-'*50 + '\n')
+    for data in qsh:
+        print(qsh.frame_to_json())
 
 def _run_unittests():
     """
