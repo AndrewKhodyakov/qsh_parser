@@ -133,9 +133,14 @@ class BaseLEB128:
 
         while True:
             if method_args:
-                byte = getattr(stream, method)(method_args)[0]
+                byte = getattr(stream, method)(method_args)
             else:
-                byte = getattr(stream, method)()[0]
+                byte = getattr(stream, method)()
+
+            if byte:
+                byte = byte[0]
+            else:
+                raise StopIteration
 
             out = out | (byte << 8*next(step))
 

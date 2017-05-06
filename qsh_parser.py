@@ -738,8 +738,12 @@ class QSHParser:
         return  'File: {}, cursor position: {}'.\
             format(self._io_stream.name, self._io_stream.tell()) + _rest
 
-#    def __iter__(self):
-#        pass
+    def __iter__(self):
+        """
+        make parser itarable
+        """
+        while True:
+            yield self.read()
 
 def _read_mode(path_to_file):
     """
