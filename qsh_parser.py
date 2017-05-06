@@ -255,10 +255,11 @@ class GrowingDateTime:
         delta = timedelta(microseconds=(self._base.read(stream)*1000))
         if delta.days > 1:
             self._start = datetime(1, 1, 1) + delta
+            out = self._start
         else:
-            self._start = self._start + delta
+            out = self._start + delta
 
-        return self._start
+        return out
 
 class AbsStruct:
     """
