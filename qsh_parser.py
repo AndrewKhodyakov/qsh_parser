@@ -752,7 +752,11 @@ class QSHParser:
         make parser itarable
         """
         while True:
-            yield self.read()
+            try:
+                yield self.read()
+            except StopIteration as i_stop:
+                self._io_stream.close()
+                raise StopIteration
 
 
 def _read_mode(path_to_file):
