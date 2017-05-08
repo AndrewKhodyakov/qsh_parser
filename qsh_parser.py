@@ -851,7 +851,7 @@ BytesIO(b'1\xff\x82\x01\x01\xa1~\x01A\x01\xee~\x03\xa4\x7f\x01U\x03\x94~\x01\xcc
             grow_dt.read(self.trades_data)
             self.trade.read(self.trades_data)
             self.assertDictEqual(self.trade.data,\
-                {"trade_type": "BID", "exchange_date_time": "2015-03-02T09:59:59",\
+                {"trade_type": "BID", "exchange_date_time": datetime(2015, 3, 2, 9, 59, 59),\
                 "exchange_trade_number": None, "bid_number": None,\
                 "transaction_price": 15250, "transaction_volume": 10,\
                 "open_interest": None})
@@ -866,7 +866,7 @@ BytesIO(b'1\xff\x82\x01\x01\xa1~\x01A\x01\xee~\x03\xa4\x7f\x01U\x03\x94~\x01\xcc
             self.assertTrue(self.header._app_name.value == 'QshWriter.5488')
             self.assertTrue(self.header._user_comment.value == 'ITinvest QSH Service')
             self.assertTrue(self.header._record_start_time.value ==\
-                datetime(year=2015, month=3, day=2, hour=6, minute=59, second=50))
+                LOCAL_TZ.localize(datetime(year=2015, month=3, day=2, hour=9, minute=59, second=50)))
             self.assertTrue(self.header._stream_count.value == 1)
             self.assertTrue(self.header._head_len == 65)
 
