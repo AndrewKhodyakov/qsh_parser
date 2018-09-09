@@ -221,7 +221,7 @@ class Growing(BaseTypes):
         read method
         """
         _tmp = self.read_uleb(stream)
-        if _tmp >= 268435454:
+        if _tmp > 268435454:
             _tmp = self.read_sleb(stream)
 
         self._last = self._last + _tmp
@@ -837,7 +837,7 @@ BytesIO(b'1\xff\x82\x01\x01\xa1~\x01A\x01\xee~\x03\xa4\x7f\x01U\x03\x94~\x01\xcc
             #growing
             self.growing.read(self.growing_uleb_one)
             self.assertEqual(self.growing.read(self.growing_uleb_two), 1248970)
-            self.assertEqual(self.growing.read(self.growing_uleb_sleb), 1248971)
+            self.assertEqual(self.growing.read(self.growing_uleb_sleb), 269684424)
 
             #growing datetime
             self.assertEqual((self.growing_datetime.read(self.growing_datetime_data)\
